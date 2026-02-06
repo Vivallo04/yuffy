@@ -31,6 +31,7 @@ public class Game1 : Game
 
     private List<AnimalNpc> _animals;
     private List<TreeDecoration> _trees;
+    private List<CropDecoration> _crops;
 
     private Vector2 _playerPosition;
 
@@ -129,6 +130,83 @@ public class Game1 : Game
                 var tree = new TreeDecoration(texture, frames, treePos, new Point(col, row), treeRng);
                 _trees.Add(tree);
                 _tilemap.BlockTile(col, row);
+                break;
+            }
+        }
+
+        Texture2D soilTexture = Content.Load<Texture2D>("images/tilesets/Elements/Crops/soil_00");
+
+        // Crop tiles from the tileset - each crop type has 3 growth stages (rows 12, 13, 15)
+        int[] cropCols = { 51, 52, 53, 54, 55, 58, 60 };
+        int[] stageRows = { 12, 13, 15 };
+        TextureRegion[][] cropStages = new TextureRegion[cropCols.Length][];
+        for (int i = 0; i < cropCols.Length; i++)
+        {
+            cropStages[i] = new TextureRegion[stageRows.Length];
+            for (int s = 0; s < stageRows.Length; s++)
+            {
+                int tx = cropCols[i] * 16;
+                int ty = stageRows[s] * 16;
+                cropStages[i][s] = new TextureRegion(tilesetTexture, new Rectangle(tx, ty, 16, 16));
+            }
+        }
+
+        Random cropRng = new Random(456);
+        _crops = new List<CropDecoration>();
+        int patchCount = 7;
+        int patchWidth = 5;
+        int patchHeight = 5;
+        var usedFarmTiles = new HashSet<Point>();
+
+        for (int p = 0; p < patchCount; p++)
+        {
+            var stages = cropStages[cropRng.Next(cropStages.Length)];
+
+            for (int attempt = 0; attempt < 100; attempt++)
+            {
+                int startCol = cropRng.Next(3, _tilemap.MapWidth - patchWidth - 3);
+                int startRow = cropRng.Next(3, _tilemap.MapHeight - patchHeight - 3);
+
+                bool areaFree = true;
+                for (int dy = 0; dy < patchHeight && areaFree; dy++)
+                {
+                    for (int dx = 0; dx < patchWidth && areaFree; dx++)
+                    {
+                        int c = startCol + dx;
+                        int r = startRow + dy;
+                        if (_tilemap.IsTileBlocked(c, r) || usedFarmTiles.Contains(new Point(c, r)))
+                            areaFree = false;
+                    }
+                }
+                if (!areaFree) continue;
+
+                for (int dy = 0; dy < patchHeight; dy++)
+                {
+                    bool isWaterRow = dy % 2 == 1;
+
+                    for (int dx = 0; dx < patchWidth; dx++)
+                    {
+                        int col = startCol + dx;
+                        int row = startRow + dy;
+                        usedFarmTiles.Add(new Point(col, row));
+
+                        if (isWaterRow)
+                        {
+                            int waterTile = cropRng.NextDouble() < 0.5 ? Tilemap.WaterTileId : Tilemap.PlainWaterTileId;
+                            _tilemap.SetTileAt(col, row, waterTile);
+                        }
+                        else
+                        {
+                            int scaledTile = _tilemap.ScaledTileSize;
+                            Vector2 cropPos = new Vector2(
+                                col * scaledTile + scaledTile / 2f,
+                                row * scaledTile + scaledTile / 2f
+                            );
+                            var cropRegion = stages[cropRng.Next(stages.Length)];
+                            _crops.Add(new CropDecoration(soilTexture, cropRegion, cropPos));
+                        }
+                    }
+                }
                 break;
             }
         }
@@ -253,6 +331,12 @@ public class Game1 : Game
         );
 
         _tilemap.Draw(_spriteBatch, visibleArea);
+
+        foreach (var crop in _crops)
+            crop.DrawSoil(_spriteBatch);
+
+        foreach (var crop in _crops)
+            crop.DrawCrop(_spriteBatch);
 
         var drawList = new List<(float y, Action<SpriteBatch> draw)>();
 

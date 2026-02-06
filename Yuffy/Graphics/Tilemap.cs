@@ -14,6 +14,12 @@ public class Tilemap
     private readonly HashSet<Point> _blockedTiles = new();
 
     public static readonly int WaterTileId = TileId(12, 19);
+    public static readonly int PlainWaterTileId = TileId(4, 1);
+
+    public static bool IsWaterTile(int tileId)
+    {
+        return tileId == WaterTileId || tileId == PlainWaterTileId;
+    }
 
     public float Scale { get; set; } = 1f;
 
@@ -28,6 +34,12 @@ public class Tilemap
         return _map[row, col];
     }
 
+    public void SetTileAt(int col, int row, int tileId)
+    {
+        if (row >= 0 && row < MapHeight && col >= 0 && col < MapWidth)
+            _map[row, col] = tileId;
+    }
+
     public void BlockTile(int col, int row)
     {
         _blockedTiles.Add(new Point(col, row));
@@ -37,7 +49,7 @@ public class Tilemap
     {
         if (row < 0 || row >= MapHeight || col < 0 || col >= MapWidth)
             return true;
-        return _map[row, col] == WaterTileId || _blockedTiles.Contains(new Point(col, row));
+        return IsWaterTile(_map[row, col]) || _blockedTiles.Contains(new Point(col, row));
     }
 
     public Tilemap(Texture2D tileset, int[,] map, int tileSize = 16)
@@ -124,7 +136,7 @@ public class Tilemap
             flowerGrass,
         };
 
-        int water = TileId(12, 19);
+        int[] waterTiles = { WaterTileId, PlainWaterTileId };
 
         int[,] map = new int[height, width];
         Random rng = new Random(seed);
@@ -166,7 +178,7 @@ public class Tilemap
                         int mapR = py + r;
                         int mapC = px + c;
                         if (mapR >= 0 && mapR < height && mapC >= 0 && mapC < width)
-                            map[mapR, mapC] = water;
+                            map[mapR, mapC] = waterTiles[rng.Next(waterTiles.Length)];
                     }
                 }
             }

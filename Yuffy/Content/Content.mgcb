@@ -57,3 +57,8 @@
 /importer:TextureImporter
 /processor:TextureProcessor
 /build:images/tilesets/Elements/Plants/spr_deco_tree_02_strip4.png
+
+#begin images/tilesets/Elements/Crops/soil_00.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Elements/Crops/soil_00.png
