@@ -3,3 +3,12 @@ obj/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
+
+.idea/
+.claude/
+.vscode/
+.junie/
+*.sln.DotSettings
+*.sln.DotSettings.user
+*.sln.DotSettings.shared
+*.sln.DotSettings.user.shared
