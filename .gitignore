@@ -12,3 +12,7 @@ riderModule.iml
 *.sln.DotSettings.user
 *.sln.DotSettings.shared
 *.sln.DotSettings.user.shared
+
+
+.DS_Store
+*.log

@@ -13,3 +13,37 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin images/tilesets/Characters/Human/IDLE/base_idle_strip9.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Human/IDLE/base_idle_strip9.png
+
+#begin images/tilesets/Characters/Human/WALKING/base_walk_strip8.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Human/WALKING/base_walk_strip8.png
+
+#begin images/tilesets/Characters/Human/IDLE/longhair_idle_strip9.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Human/IDLE/longhair_idle_strip9.png
+
+#begin images/tilesets/Characters/Human/WALKING/longhair_walk_strip8.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Human/WALKING/longhair_walk_strip8.png
+
+#begin images/tilesets/Tileset/spr_tileset_sunnysideworld_16px.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Tileset/spr_tileset_sunnysideworld_16px.png
+
+#begin images/tilesets/Elements/Animals/spr_deco_cow_strip4.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Elements/Animals/spr_deco_cow_strip4.png
+
+#begin images/tilesets/Elements/Animals/spr_deco_chicken_01_strip4.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Elements/Animals/spr_deco_chicken_01_strip4.png
