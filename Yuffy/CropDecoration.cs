@@ -10,7 +10,7 @@ public class CropDecoration
     private readonly Sprite _cropSprite;
     private readonly Vector2 _position;
 
-    public float Y => _position.Y + _soilSprite.Scale.Y * _soilSprite.Region.Height / 2f;
+    public float Y => _position.Y;
 
     public CropDecoration(Texture2D soilTexture, TextureRegion cropRegion, Vector2 position)
     {
