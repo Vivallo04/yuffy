@@ -21,6 +21,7 @@ public class AnimalNpc
     private readonly Random _rng;
 
     private Vector2 _position;
+    public float Y => _position.Y;
     private Vector2 _direction;
     private State _state;
     private float _stateTimer;

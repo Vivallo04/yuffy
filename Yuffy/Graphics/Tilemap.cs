@@ -34,13 +34,25 @@ public class Tilemap
         _tilesPerRow = tileset.Width / tileSize;
     }
 
-    public void Draw(SpriteBatch spriteBatch)
+    public void Draw(SpriteBatch spriteBatch, Rectangle? visibleArea = null)
     {
         int scaledTile = (int)(_tileSize * Scale);
 
-        for (int row = 0; row < _map.GetLength(0); row++)
+        int startCol = 0, endCol = _map.GetLength(1);
+        int startRow = 0, endRow = _map.GetLength(0);
+
+        if (visibleArea.HasValue)
         {
-            for (int col = 0; col < _map.GetLength(1); col++)
+            var area = visibleArea.Value;
+            startCol = Math.Max(0, area.X / scaledTile);
+            startRow = Math.Max(0, area.Y / scaledTile);
+            endCol = Math.Min(_map.GetLength(1), area.Right / scaledTile + 2);
+            endRow = Math.Min(_map.GetLength(0), area.Bottom / scaledTile + 2);
+        }
+
+        for (int row = startRow; row < endRow; row++)
+        {
+            for (int col = startCol; col < endCol; col++)
             {
                 int tileId = _map[row, col];
                 if (tileId < 0) continue;
@@ -81,15 +93,12 @@ public class Tilemap
     }
 
     /// <summary>
-    /// Creates a natural grass map with a water pond.
+    /// Creates a natural grass map with water ponds.
     /// </summary>
     public static int[,] CreateGrassWithPondMap(int width, int height, int seed = 42)
     {
-        // Solid green tiles from color reference row (row 1, cols 1-2) — no decorations
         int solidGreen1 = TileId(1, 1);
         int solidGreen2 = TileId(2, 1);
-
-        // Decorated grass for rare accents
         int flowerGrass = TileId(4, 2);
 
         int[] weightedGrass =
@@ -101,13 +110,11 @@ public class Tilemap
             flowerGrass,
         };
 
-        // Water center tile (solid blue block at cols 11-14, rows 18-21)
         int water = TileId(12, 19);
 
         int[,] map = new int[height, width];
         Random rng = new Random(seed);
 
-        // Fill with mostly solid green
         for (int row = 0; row < height; row++)
         {
             for (int col = 0; col < width; col++)
@@ -116,31 +123,38 @@ public class Tilemap
             }
         }
 
-        // Hand-crafted lake shape — organic blob positioned center-right
-        // '.' = keep grass, 'W' = water
-        string[] lakeShape =
+        string[][] lakeTemplates =
         {
-            "..WWW.",
-            ".WWWWW",
-            ".WWWWW",
-            "..WWWW",
-            "...WW.",
+            new[] { "..WWW.", ".WWWWW", ".WWWWW", "..WWWW", "...WW." },
+            new[] { ".WW.", "WWWW", "WWWW", ".WW." },
+            new[] { "..WWWWWW..", ".WWWWWWWW.", "..WWWWWW.." },
+            new[] { "WWW...", "WWWW..", ".WWWW.", "..WWWW", "...WWW" },
         };
 
-        int lakeX = width - 10;
-        int lakeY = (height - lakeShape.Length) / 2;
+        int numPonds = Math.Max(1, (width * height) / 200);
 
-        for (int r = 0; r < lakeShape.Length; r++)
+        for (int i = 0; i < numPonds; i++)
         {
-            for (int c = 0; c < lakeShape[r].Length; c++)
-            {
-                int mapR = lakeY + r;
-                int mapC = lakeX + c;
-                if (mapR < 0 || mapR >= height || mapC < 0 || mapC >= width)
-                    continue;
+            var template = lakeTemplates[rng.Next(lakeTemplates.Length)];
+            int templateH = template.Length;
+            int templateW = template[0].Length;
 
-                if (lakeShape[r][c] == 'W')
-                    map[mapR, mapC] = water;
+            int margin = 3;
+            int px = rng.Next(margin, Math.Max(margin + 1, width - templateW - margin));
+            int py = rng.Next(margin, Math.Max(margin + 1, height - templateH - margin));
+
+            for (int r = 0; r < templateH; r++)
+            {
+                for (int c = 0; c < template[r].Length; c++)
+                {
+                    if (template[r][c] == 'W')
+                    {
+                        int mapR = py + r;
+                        int mapC = px + c;
+                        if (mapR >= 0 && mapR < height && mapC >= 0 && mapC < width)
+                            map[mapR, mapC] = water;
+                    }
+                }
             }
         }
 
