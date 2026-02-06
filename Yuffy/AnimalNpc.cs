@@ -57,8 +57,7 @@ public class AnimalNpc
             int col = _rng.Next(_tilemap.MapWidth);
             int row = _rng.Next(_tilemap.MapHeight);
 
-            int tileId = _tilemap.GetTileAt(col, row);
-            if (tileId != Tilemap.WaterTileId && tileId >= 0)
+            if (!_tilemap.IsTileBlocked(col, row))
             {
                 _position = new Vector2(
                     col * scaledTile + scaledTile / 2f,
@@ -141,7 +140,7 @@ public class AnimalNpc
         int col = (int)(position.X / scaledTile);
         int row = (int)(position.Y / scaledTile);
 
-        return _tilemap.GetTileAt(col, row) != Tilemap.WaterTileId;
+        return !_tilemap.IsTileBlocked(col, row);
     }
 
     private float RandomRange(float min, float max)

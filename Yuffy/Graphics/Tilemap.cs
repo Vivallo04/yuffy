@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -10,6 +11,7 @@ public class Tilemap
     private readonly int[,] _map;
     private readonly int _tileSize;
     private readonly int _tilesPerRow;
+    private readonly HashSet<Point> _blockedTiles = new();
 
     public static readonly int WaterTileId = TileId(12, 19);
 
@@ -24,6 +26,18 @@ public class Tilemap
         if (row < 0 || row >= MapHeight || col < 0 || col >= MapWidth)
             return -1;
         return _map[row, col];
+    }
+
+    public void BlockTile(int col, int row)
+    {
+        _blockedTiles.Add(new Point(col, row));
+    }
+
+    public bool IsTileBlocked(int col, int row)
+    {
+        if (row < 0 || row >= MapHeight || col < 0 || col >= MapWidth)
+            return true;
+        return _map[row, col] == WaterTileId || _blockedTiles.Contains(new Point(col, row));
     }
 
     public Tilemap(Texture2D tileset, int[,] map, int tileSize = 16)

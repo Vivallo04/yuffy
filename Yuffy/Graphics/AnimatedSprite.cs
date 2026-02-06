@@ -29,6 +29,14 @@ public class AnimatedSprite : Sprite
         Animation = animation;
     }
 
+    public void SetFrame(int frame, TimeSpan elapsed)
+    {
+        if (_animation == null) return;
+        _currentFrame = frame % _animation.Frames.Count;
+        _elapsed = elapsed;
+        Region = _animation.Frames[_currentFrame];
+    }
+
     public void Update(GameTime gameTime)
     {
         if (_animation == null) return;

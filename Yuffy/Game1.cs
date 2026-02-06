@@ -30,6 +30,7 @@ public class Game1 : Game
     private Tilemap _tilemap;
 
     private List<AnimalNpc> _animals;
+    private List<TreeDecoration> _trees;
 
     private Vector2 _playerPosition;
 
@@ -83,6 +84,54 @@ public class Game1 : Game
         int[,] mapData = Tilemap.CreateGrassWithPondMap(60, 40);
         _tilemap = new Tilemap(tilesetTexture, mapData);
         _tilemap.Scale = 3f;
+
+        Texture2D tree01Texture = Content.Load<Texture2D>("images/tilesets/Elements/Plants/spr_deco_tree_01_strip4");
+        Texture2D tree02Texture = Content.Load<Texture2D>("images/tilesets/Elements/Plants/spr_deco_tree_02_strip4");
+
+        Random treeRng = new Random(123);
+        _trees = new List<TreeDecoration>();
+        int treeCount = 30;
+        int minSpacing = 3;
+
+        for (int i = 0; i < treeCount; i++)
+        {
+            for (int attempt = 0; attempt < 100; attempt++)
+            {
+                int col = treeRng.Next(2, _tilemap.MapWidth - 2);
+                int row = treeRng.Next(2, _tilemap.MapHeight - 2);
+
+                if (_tilemap.IsTileBlocked(col, row))
+                    continue;
+
+                bool tooClose = false;
+                foreach (var existing in _trees)
+                {
+                    int dx = Math.Abs(existing.BlockedTile.X - col);
+                    int dy = Math.Abs(existing.BlockedTile.Y - row);
+                    if (dx < minSpacing && dy < minSpacing)
+                    {
+                        tooClose = true;
+                        break;
+                    }
+                }
+                if (tooClose) continue;
+
+                int scaledTile = _tilemap.ScaledTileSize;
+                Vector2 treePos = new Vector2(
+                    col * scaledTile + scaledTile / 2f,
+                    (row + 1) * scaledTile
+                );
+
+                bool isConifer = treeRng.NextDouble() < 0.4;
+                var texture = isConifer ? tree02Texture : tree01Texture;
+                int frames = 4;
+
+                var tree = new TreeDecoration(texture, frames, treePos, new Point(col, row), treeRng);
+                _trees.Add(tree);
+                _tilemap.BlockTile(col, row);
+                break;
+            }
+        }
 
         _playerPosition = new Vector2(
             _tilemap.MapWidth * _tilemap.ScaledTileSize / 2f,
@@ -143,10 +192,10 @@ public class Game1 : Game
             _playerPosition.Y = MathHelper.Clamp(_playerPosition.Y, halfTile, worldH - halfTile);
 
             float r = _tilemap.ScaledTileSize * 0.3f;
-            if (IsWaterAt(_playerPosition.X - r, _playerPosition.Y) ||
-                IsWaterAt(_playerPosition.X + r, _playerPosition.Y) ||
-                IsWaterAt(_playerPosition.X, _playerPosition.Y - r) ||
-                IsWaterAt(_playerPosition.X, _playerPosition.Y + r))
+            if (IsTileBlockedAt(_playerPosition.X - r, _playerPosition.Y) ||
+                IsTileBlockedAt(_playerPosition.X + r, _playerPosition.Y) ||
+                IsTileBlockedAt(_playerPosition.X, _playerPosition.Y - r) ||
+                IsTileBlockedAt(_playerPosition.X, _playerPosition.Y + r))
                 _playerPosition = previousPosition;
 
             _player.Animation = _walkAnimation;
@@ -175,6 +224,9 @@ public class Game1 : Game
         foreach (var animal in _animals)
             animal.Update(gameTime);
 
+        foreach (var tree in _trees)
+            tree.Update(gameTime);
+
         base.Update(gameTime);
     }
 
@@ -202,24 +254,30 @@ public class Game1 : Game
 
         _tilemap.Draw(_spriteBatch, visibleArea);
 
-        _animals.Sort((a, b) => a.Y.CompareTo(b.Y));
+        var drawList = new List<(float y, Action<SpriteBatch> draw)>();
 
-        bool playerDrawn = false;
+        drawList.Add((_playerPosition.Y, sb =>
+        {
+            _player.Draw(sb, _playerPosition);
+            _hair.Draw(sb, _playerPosition);
+        }));
+
         foreach (var animal in _animals)
         {
-            if (!playerDrawn && _playerPosition.Y < animal.Y)
-            {
-                _player.Draw(_spriteBatch, _playerPosition);
-                _hair.Draw(_spriteBatch, _playerPosition);
-                playerDrawn = true;
-            }
-            animal.Draw(_spriteBatch);
+            var a = animal;
+            drawList.Add((a.Y, sb => a.Draw(sb)));
         }
-        if (!playerDrawn)
+
+        foreach (var tree in _trees)
         {
-            _player.Draw(_spriteBatch, _playerPosition);
-            _hair.Draw(_spriteBatch, _playerPosition);
+            var t = tree;
+            drawList.Add((t.Y, sb => t.Draw(sb)));
         }
+
+        drawList.Sort((a, b) => a.y.CompareTo(b.y));
+
+        foreach (var entry in drawList)
+            entry.draw(_spriteBatch);
 
         _spriteBatch.End();
 
@@ -257,10 +315,10 @@ public class Game1 : Game
         _destinationRect = new Rectangle(offsetX, offsetY, scaledWidth, scaledHeight);
     }
 
-    private bool IsWaterAt(float x, float y)
+    private bool IsTileBlockedAt(float x, float y)
     {
         int col = (int)(x / _tilemap.ScaledTileSize);
         int row = (int)(y / _tilemap.ScaledTileSize);
-        return _tilemap.GetTileAt(col, row) == Tilemap.WaterTileId;
+        return _tilemap.IsTileBlocked(col, row);
     }
 }

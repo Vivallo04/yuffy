@@ -47,3 +47,13 @@
 /importer:TextureImporter
 /processor:TextureProcessor
 /build:images/tilesets/Elements/Animals/spr_deco_chicken_01_strip4.png
+
+#begin images/tilesets/Elements/Plants/spr_deco_tree_01_strip4.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Elements/Plants/spr_deco_tree_01_strip4.png
+
+#begin images/tilesets/Elements/Plants/spr_deco_tree_02_strip4.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Elements/Plants/spr_deco_tree_02_strip4.png
