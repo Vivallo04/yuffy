@@ -41,12 +41,12 @@ public class SkeletonNpc
     private float _deathAnimTimer;
     private float _alertTimer;
 
-    private const float WanderSpeed = 40f;
-    private const float ChaseSpeed = 90f;
-    private const float DetectionRadius = 200f;
-    private const float AttackRange = 60f;
+    private const float WanderSpeed = 45f;
+    private const float ChaseSpeed = 110f;
+    private const float DetectionRadius = 250f;
+    private const float AttackRange = 55f;
     private const int AttackDamage = 1;
-    private const float AttackCooldownSeconds = 1.0f;
+    private const float AttackCooldownSeconds = 0.8f;
 
     public SkeletonNpc(Texture2D idleTex, Texture2D walkTex, Texture2D attackTex,
         Texture2D hurtTex, Texture2D deathTex, Texture2D jumpTex,

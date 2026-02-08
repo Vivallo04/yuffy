@@ -49,7 +49,7 @@ public class Game1 : Game
 
     private Texture2D _pixelTexture;
     private float _timeOfDay = 0.35f;
-    private const float DayDurationSeconds = 180f;
+    private const float DayDurationSeconds = 90f;
 
     private Texture2D _skelIdleTex, _skelWalkTex, _skelAttackTex;
     private Texture2D _skelHurtTex, _skelDeathTex, _skelJumpTex;
@@ -72,6 +72,25 @@ public class Game1 : Game
     private float _deathFadeTimer;
 
     private Texture2D _cursorTexture;
+
+    private Inventory _inventory;
+    private InventoryUI _inventoryUI;
+    private bool _inventoryOpen;
+    private KeyboardState _previousKeyboardState;
+    private ToolbarUI _toolbarUI;
+    private SnowParticles _snowParticles;
+    private bool _inSnowBiome;
+
+    private SpriteFont _minecraftFont;
+    private Texture2D _mushroomTexture;
+    private List<Collectible> _collectibles;
+    private MiniGameUI _miniGameUI;
+
+    private Texture2D _indicatorTexture;
+    private LetterUI _letterUI;
+    private bool _letterPlaced;
+    private bool _letterRead;
+    private float _indicatorBob;
 
     public Game1()
     {
@@ -374,13 +393,99 @@ public class Game1 : Game
         _alertTexture = Content.Load<Texture2D>("images/tilesets/UI/expression_alerted");
         _deathIconTexture = Content.Load<Texture2D>("images/tilesets/UI/expression_attack");
         _cursorTexture = Content.Load<Texture2D>("images/tilesets/UI/cursor_01");
+
+        // 9-slice inventory panel
+        var nineSliceBox = new NineSliceBox(
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/dt_box_9slice_tl"),
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/dt_box_9slice_tc"),
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/dt_box_9slice_tr"),
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/dt_box_9slice_lc"),
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/dt_box_9slice_c"),
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/dt_box_9slice_rc"),
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/dt_box_9slice_bl"),
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/dt_box_9slice_bc"),
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/dt_box_9slice_br"),
+            4);
+
+        var itemDisc = Content.Load<Texture2D>("images/tilesets/UI/itemdisc_01");
+        var itemTextures = new Dictionary<ItemType, Texture2D>();
+        foreach (var kvp in ItemData.Catalog)
+            itemTextures[kvp.Key] = Content.Load<Texture2D>(kvp.Value.TextureKey);
+
+        _inventory = new Inventory();
+
+        _inventoryUI = new InventoryUI(nineSliceBox, itemDisc, itemTextures, _inventory);
+        _toolbarUI = new ToolbarUI(_pixelTexture, itemTextures, _inventory);
+        _snowParticles = new SnowParticles(_pixelTexture, VirtualWidth, VirtualHeight);
+
+        _minecraftFont = Content.Load<SpriteFont>("fonts/Minecraft");
+        _indicatorTexture = Content.Load<Texture2D>("images/tilesets/UI/indicator");
+        _letterUI = new LetterUI(nineSliceBox, _minecraftFont, _pixelTexture);
+        string letterPath = System.IO.Path.Combine(Content.RootDirectory, "letter.txt");
+        _letterUI.Text = System.IO.File.ReadAllText(letterPath);
+        _mushroomTexture = Content.Load<Texture2D>("images/tilesets/UI/playercount");
+        var labelLeft = Content.Load<Texture2D>("images/tilesets/UI/label_left");
+        var labelMiddle = Content.Load<Texture2D>("images/tilesets/UI/label_middle");
+        var labelRight = Content.Load<Texture2D>("images/tilesets/UI/label_right");
+
+        Random mushRng = new Random();
+        _collectibles = new List<Collectible>();
+        for (int i = 0; i < 35; i++)
+        {
+            for (int attempt = 0; attempt < 100; attempt++)
+            {
+                int col = mushRng.Next(3, _tilemap.MapWidth - 3);
+                int row = mushRng.Next(3, _tilemap.MapHeight - 3);
+                if (_tilemap.IsTileBlocked(col, row)) continue;
+                int st = _tilemap.ScaledTileSize;
+                var pos = new Vector2(col * st + st / 2f, row * st + st / 2f);
+                _collectibles.Add(new Collectible(_mushroomTexture, pos));
+                break;
+            }
+        }
+
+        _miniGameUI = new MiniGameUI(_minecraftFont, _mushroomTexture, itemDisc, labelLeft, labelMiddle, labelRight);
+        _miniGameUI.IsActive = true;
     }
 
     protected override void Update(GameTime gameTime)
     {
-        if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed ||
-            Keyboard.GetState().IsKeyDown(Keys.Escape))
+        KeyboardState currentKeyState = Keyboard.GetState();
+
+        if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
             Exit();
+
+        // Tab toggles inventory
+        if (currentKeyState.IsKeyDown(Keys.Tab) && !_previousKeyboardState.IsKeyDown(Keys.Tab))
+            _inventoryOpen = !_inventoryOpen;
+
+        // E key: open/close letter
+        if (currentKeyState.IsKeyDown(Keys.E) && !_previousKeyboardState.IsKeyDown(Keys.E))
+        {
+            if (_letterUI.IsOpen)
+            {
+                _letterUI.IsOpen = false;
+                _letterRead = true;
+            }
+            else if (_letterPlaced && _toolbarUI.SelectedSlot == 0)
+            {
+                _letterUI.Open();
+            }
+        }
+
+        // Escape closes inventory/letter first, then exits game
+        if (currentKeyState.IsKeyDown(Keys.Escape) && !_previousKeyboardState.IsKeyDown(Keys.Escape))
+        {
+            if (_letterUI.IsOpen)
+            {
+                _letterUI.IsOpen = false;
+                _letterRead = true;
+            }
+            else if (_inventoryOpen)
+                _inventoryOpen = false;
+            else
+                Exit();
+        }
 
         // Death fade-out
         if (_deathFadeTimer > 0)
@@ -397,24 +502,27 @@ public class Game1 : Game
             }
             _player.Update(gameTime);
             _hair.Update(gameTime);
+            _previousKeyboardState = currentKeyState;
             base.Update(gameTime);
             return;
         }
 
-        KeyboardState keyboardState = Keyboard.GetState();
         Vector2 direction = Vector2.Zero;
 
-        if (keyboardState.IsKeyDown(Keys.W) || keyboardState.IsKeyDown(Keys.Up))
-            direction.Y -= 1;
-        if (keyboardState.IsKeyDown(Keys.S) || keyboardState.IsKeyDown(Keys.Down))
-            direction.Y += 1;
-        if (keyboardState.IsKeyDown(Keys.A) || keyboardState.IsKeyDown(Keys.Left))
-            direction.X -= 1;
-        if (keyboardState.IsKeyDown(Keys.D) || keyboardState.IsKeyDown(Keys.Right))
-            direction.X += 1;
+        if (!_inventoryOpen && !_letterUI.IsOpen)
+        {
+            if (currentKeyState.IsKeyDown(Keys.W) || currentKeyState.IsKeyDown(Keys.Up))
+                direction.Y -= 1;
+            if (currentKeyState.IsKeyDown(Keys.S) || currentKeyState.IsKeyDown(Keys.Down))
+                direction.Y += 1;
+            if (currentKeyState.IsKeyDown(Keys.A) || currentKeyState.IsKeyDown(Keys.Left))
+                direction.X -= 1;
+            if (currentKeyState.IsKeyDown(Keys.D) || currentKeyState.IsKeyDown(Keys.Right))
+                direction.X += 1;
+        }
 
         bool isMoving = direction != Vector2.Zero;
-        bool isSprinting = keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift);
+        bool isSprinting = currentKeyState.IsKeyDown(Keys.LeftShift) || currentKeyState.IsKeyDown(Keys.RightShift);
 
         // Decrement reaction timer
         if (_playerReactionTimer > 0)
@@ -500,7 +608,7 @@ public class Game1 : Game
             _goblinsSpawnedThisNight = true;
             _goblinsDyingTriggered = false;
             Random gobRng = new Random();
-            int gobCount = gobRng.Next(10, 16);
+            int gobCount = gobRng.Next(18, 25);
             for (int i = 0; i < gobCount; i++)
             {
                 var gob = new GoblinNpc(_gobIdleTex, _gobWalkTex, _gobAttackTex,
@@ -580,6 +688,46 @@ public class Game1 : Game
             _hair.Animation = _hairDeathAnimation;
         }
 
+        // Update collectibles (magnet + collection)
+        foreach (var c in _collectibles)
+            c.Update((float)gameTime.ElapsedGameTime.TotalSeconds, _playerPosition);
+
+        int collected = 0;
+        foreach (var c in _collectibles)
+            if (c.Collected) collected++;
+
+        _miniGameUI.Collected = collected;
+        if (collected >= _miniGameUI.Target && !_miniGameUI.Won)
+            _miniGameUI.TriggerWin();
+        _miniGameUI.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
+
+        // Place letter in toolbar when all mushrooms collected
+        if (_miniGameUI.Won && !_letterPlaced)
+        {
+            _inventory.SetSlot(0, 0, ItemType.Letter, 1);
+            _letterPlaced = true;
+        }
+
+        // Indicator bob animation
+        _indicatorBob += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+        // Letter scroll
+        _letterUI.Update((float)gameTime.ElapsedGameTime.TotalSeconds, currentKeyState, Mouse.GetState());
+
+        _inSnowBiome = !_tilemap.IsGrassBiomeRow(
+            (int)(_playerPosition.Y / _tilemap.ScaledTileSize));
+        if (_inSnowBiome)
+            _snowParticles.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
+
+        // Number keys 1-7 select toolbar slot
+        for (int i = 0; i < 7; i++)
+        {
+            Keys numKey = Keys.D1 + i;
+            if (currentKeyState.IsKeyDown(numKey) && !_previousKeyboardState.IsKeyDown(numKey))
+                _toolbarUI.SelectedSlot = i;
+        }
+
+        _previousKeyboardState = currentKeyState;
         base.Update(gameTime);
     }
 
@@ -606,6 +754,8 @@ public class Game1 : Game
         );
 
         _tilemap.Draw(_spriteBatch, visibleArea);
+        if (_inSnowBiome)
+            _snowParticles.Draw(_spriteBatch, _camera.Position);
 
         foreach (var crop in _crops)
             crop.DrawSoil(_spriteBatch);
@@ -650,6 +800,13 @@ public class Game1 : Game
         {
             var g = gob;
             drawList.Add((g.Y, sb => g.Draw(sb)));
+        }
+
+        foreach (var c in _collectibles)
+        {
+            var coll = c;
+            if (!coll.Collected)
+                drawList.Add((coll.Y, sb => coll.Draw(sb)));
         }
 
         drawList.Sort((a, b) => a.y.CompareTo(b.y));
@@ -704,6 +861,49 @@ public class Game1 : Game
             _spriteBatch.End();
         }
 
+        // Toolbar hotbar (always visible)
+        _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+        _toolbarUI.Draw(_spriteBatch);
+
+        // Bouncing indicator above toolbar slot 0 when letter placed
+        if (_letterPlaced && !_letterRead)
+        {
+            float bob = MathF.Sin(_indicatorBob * 4f) * 6f;
+            float indicatorScale = 3f;
+            int slotX = (VirtualWidth - (7 * 43 + 6 * 2)) / 2;
+            int slotCenterX = slotX + 43 / 2;
+            int slotTopY = VirtualHeight - 43 - 8;
+            int indW = (int)(_indicatorTexture.Width * indicatorScale);
+            int indH = (int)(_indicatorTexture.Height * indicatorScale);
+            int indX = slotCenterX - indW / 2;
+            int indY = (int)(slotTopY - indH - 4 + bob);
+            _spriteBatch.Draw(_indicatorTexture, new Rectangle(indX, indY, indW, indH), Color.White);
+        }
+        _spriteBatch.End();
+
+        // Mini-game HUD
+        _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+        _miniGameUI.Draw(_spriteBatch);
+        _spriteBatch.End();
+
+        // Letter overlay
+        if (_letterUI.IsOpen)
+        {
+            _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+            _letterUI.Draw(_spriteBatch);
+            _spriteBatch.End();
+        }
+
+        // Inventory UI
+        if (_inventoryOpen)
+        {
+            _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+            _spriteBatch.Draw(_pixelTexture, new Rectangle(0, 0, VirtualWidth, VirtualHeight),
+                new Color(0, 0, 0, 120));
+            _inventoryUI.Draw(_spriteBatch);
+            _spriteBatch.End();
+        }
+
         // Custom cursor
         if (_destinationRect.Width > 0 && _destinationRect.Height > 0)
         {
@@ -715,7 +915,7 @@ public class Game1 : Game
 
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             _spriteBatch.Draw(_cursorTexture, new Vector2(vx, vy), null,
-                Color.White, 0f, Vector2.Zero, 0.9375f, SpriteEffects.None, 0f);
+                Color.White, 0f, Vector2.Zero, 1.875f, SpriteEffects.None, 0f);
             _spriteBatch.End();
         }
 

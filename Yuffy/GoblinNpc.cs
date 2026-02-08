@@ -41,12 +41,12 @@ public class GoblinNpc
     private float _deathAnimTimer;
     private float _alertTimer;
 
-    private const float WanderSpeed = 40f;
-    private const float ChaseSpeed = 90f;
-    private const float DetectionRadius = 200f;
-    private const float AttackRange = 60f;
-    private const int AttackDamage = 1;
-    private const float AttackCooldownSeconds = 1.0f;
+    private const float WanderSpeed = 60f;
+    private const float ChaseSpeed = 140f;
+    private const float DetectionRadius = 300f;
+    private const float AttackRange = 50f;
+    private const int AttackDamage = 2;
+    private const float AttackCooldownSeconds = 0.6f;
 
     public GoblinNpc(Texture2D idleTex, Texture2D walkTex, Texture2D attackTex,
         Texture2D hurtTex, Texture2D deathTex, Texture2D jumpTex,
@@ -133,7 +133,7 @@ public class GoblinNpc
                 ChasePlayer(dt, playerPos);
                 if (distToPlayer < AttackRange && _attackCooldown <= 0)
                     EnterAttackState(playerPos);
-                else if (distToPlayer > DetectionRadius * 1.5f)
+                else if (distToPlayer > DetectionRadius * 2.5f)
                     EnterWanderState();
                 break;
 
@@ -189,7 +189,7 @@ public class GoblinNpc
     private void EnterIdleState()
     {
         _state = State.Idle;
-        _stateTimer = RandomRange(1f, 3f);
+        _stateTimer = RandomRange(0.5f, 1.5f);
         _sprite.Animation = _idleAnimation;
         _direction = Vector2.Zero;
     }
@@ -197,7 +197,7 @@ public class GoblinNpc
     private void EnterWanderState()
     {
         _state = State.Wander;
-        _stateTimer = RandomRange(2f, 4f);
+        _stateTimer = RandomRange(1f, 2.5f);
         _sprite.Animation = _walkAnimation;
 
         float angle = (float)(_rng.NextDouble() * Math.PI * 2.0);

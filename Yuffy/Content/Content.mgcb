@@ -173,3 +173,128 @@
 /processor:TextureProcessor
 /build:images/tilesets/Characters/Goblin/PNG/spr_jump_strip9.png
 
+#begin images/tilesets/UI/9slice_box_white/dt_box_9slice_tl.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/dt_box_9slice_tl.png
+
+#begin images/tilesets/UI/9slice_box_white/dt_box_9slice_tc.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/dt_box_9slice_tc.png
+
+#begin images/tilesets/UI/9slice_box_white/dt_box_9slice_tr.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/dt_box_9slice_tr.png
+
+#begin images/tilesets/UI/9slice_box_white/dt_box_9slice_lc.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/dt_box_9slice_lc.png
+
+#begin images/tilesets/UI/9slice_box_white/dt_box_9slice_c.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/dt_box_9slice_c.png
+
+#begin images/tilesets/UI/9slice_box_white/dt_box_9slice_rc.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/dt_box_9slice_rc.png
+
+#begin images/tilesets/UI/9slice_box_white/dt_box_9slice_bl.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/dt_box_9slice_bl.png
+
+#begin images/tilesets/UI/9slice_box_white/dt_box_9slice_bc.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/dt_box_9slice_bc.png
+
+#begin images/tilesets/UI/9slice_box_white/dt_box_9slice_br.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/dt_box_9slice_br.png
+
+#begin images/tilesets/UI/sword.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/sword.png
+
+#begin images/tilesets/UI/axe.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/axe.png
+
+#begin images/tilesets/UI/pickaxe.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/pickaxe.png
+
+#begin images/tilesets/UI/hammer.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/hammer.png
+
+#begin images/tilesets/UI/rod.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/rod.png
+
+#begin images/tilesets/UI/water.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/water.png
+
+#begin images/tilesets/UI/plant.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/plant.png
+
+#begin images/tilesets/UI/basket.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/basket.png
+
+#begin images/tilesets/UI/itemdisc_01.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/itemdisc_01.png
+
+#begin images/tilesets/UI/playercount.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/playercount.png
+
+#begin images/tilesets/UI/label_left.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/label_left.png
+
+#begin images/tilesets/UI/label_middle.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/label_middle.png
+
+#begin images/tilesets/UI/label_right.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/label_right.png
+
+#begin images/tilesets/UI/expression_chat.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/expression_chat.png
+
+#begin images/tilesets/UI/indicator.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/indicator.png
+
+#begin fonts/Minecraft.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/build:fonts/Minecraft.spritefont
+
