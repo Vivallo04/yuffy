@@ -218,6 +218,51 @@
 /processor:TextureProcessor
 /build:images/tilesets/UI/9slice_box_white/dt_box_9slice_br.png
 
+#begin images/tilesets/UI/9slice_box_white/lt_box_9slice_tl.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/lt_box_9slice_tl.png
+
+#begin images/tilesets/UI/9slice_box_white/lt_box_9slice_tc.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/lt_box_9slice_tc.png
+
+#begin images/tilesets/UI/9slice_box_white/lt_box_9slice_tr.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/lt_box_9slice_tr.png
+
+#begin images/tilesets/UI/9slice_box_white/lt_box_9slice_lc.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/lt_box_9slice_lc.png
+
+#begin images/tilesets/UI/9slice_box_white/lt_box_9slice_c.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/lt_box_9slice_c.png
+
+#begin images/tilesets/UI/9slice_box_white/lt_box_9slice_rc.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/lt_box_9slice_rc.png
+
+#begin images/tilesets/UI/9slice_box_white/lt_box_9slice_bl.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/lt_box_9slice_bl.png
+
+#begin images/tilesets/UI/9slice_box_white/lt_box_9slice_bc.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/lt_box_9slice_bc.png
+
+#begin images/tilesets/UI/9slice_box_white/lt_box_9slice_br.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/9slice_box_white/lt_box_9slice_br.png
+
 #begin images/tilesets/UI/sword.png
 /importer:TextureImporter
 /processor:TextureProcessor

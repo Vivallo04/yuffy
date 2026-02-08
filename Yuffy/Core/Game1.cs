@@ -98,6 +98,13 @@ public class Game1 : Game
     private bool _letterRead;
     private float _indicatorBob;
 
+    private enum GameState { MainMenu, Playing, Paused }
+    private GameState _gameState = GameState.MainMenu;
+    private MainMenuUI _mainMenuUI;
+    private PauseMenuUI _pauseMenuUI;
+    private NineSliceBox _buttonBox;
+    private MouseState _previousMouseState;
+
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this);
@@ -471,14 +478,86 @@ public class Game1 : Game
         _miniGameUI = new MiniGameUI(_minecraftFont, _mushroomTexture, itemDisc,
             _labelLeft, _labelMiddle, _labelRight, sandTimerTex, _viewport);
         _miniGameUI.IsActive = true;
+
+        // Light 9-slice for button backgrounds
+        _buttonBox = new NineSliceBox(
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/lt_box_9slice_tl"),
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/lt_box_9slice_tc"),
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/lt_box_9slice_tr"),
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/lt_box_9slice_lc"),
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/lt_box_9slice_c"),
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/lt_box_9slice_rc"),
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/lt_box_9slice_bl"),
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/lt_box_9slice_bc"),
+            Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/lt_box_9slice_br"),
+            4);
+
+        _mainMenuUI = new MainMenuUI(nineSliceBox, _buttonBox, _minecraftFont, _pixelTexture, _viewport);
+        _pauseMenuUI = new PauseMenuUI(nineSliceBox, _buttonBox, _minecraftFont, _pixelTexture, _viewport);
+    }
+
+    private Vector2 GetVirtualMousePosition(MouseState mouseState)
+    {
+        if (_destinationRect.Width <= 0 || _destinationRect.Height <= 0)
+            return Vector2.Zero;
+
+        float retinaScale = (float)GraphicsDevice.Viewport.Width / Math.Max(1, Window.ClientBounds.Width);
+        float logDestX = _destinationRect.X / retinaScale;
+        float logDestW = _destinationRect.Width / retinaScale;
+        float logDestY = _destinationRect.Y / retinaScale;
+        float logDestH = _destinationRect.Height / retinaScale;
+        float vx = (mouseState.X - logDestX) * _viewport.Width / logDestW;
+        float vy = (mouseState.Y - logDestY) * _viewport.Height / logDestH;
+        vx = MathHelper.Clamp(vx, 0, _viewport.Width - 1);
+        vy = MathHelper.Clamp(vy, 0, _viewport.Height - 1);
+        return new Vector2(vx, vy);
     }
 
     protected override void Update(GameTime gameTime)
     {
         KeyboardState currentKeyState = Keyboard.GetState();
+        var mouseState = Mouse.GetState();
+        var virtualMouse = GetVirtualMousePosition(mouseState);
 
         if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
             Exit();
+
+        // Main menu state
+        if (_gameState == GameState.MainMenu)
+        {
+            var action = _mainMenuUI.Update(virtualMouse, mouseState, _previousMouseState);
+            if (action == MenuAction.Play)
+                _gameState = GameState.Playing;
+            else if (action == MenuAction.Exit)
+                Exit();
+
+            _previousKeyboardState = currentKeyState;
+            _previousMouseState = mouseState;
+            base.Update(gameTime);
+            return;
+        }
+
+        // Paused state
+        if (_gameState == GameState.Paused)
+        {
+            if (currentKeyState.IsKeyDown(Keys.Escape) && !_previousKeyboardState.IsKeyDown(Keys.Escape))
+                _gameState = GameState.Playing;
+            else
+            {
+                var action = _pauseMenuUI.Update(virtualMouse, mouseState, _previousMouseState);
+                if (action == PauseAction.Resume)
+                    _gameState = GameState.Playing;
+                else if (action == PauseAction.ExitToMenu)
+                    _gameState = GameState.MainMenu;
+            }
+
+            _previousKeyboardState = currentKeyState;
+            _previousMouseState = mouseState;
+            base.Update(gameTime);
+            return;
+        }
+
+        // --- Playing state ---
 
         // Tab toggles inventory
         if (currentKeyState.IsKeyDown(Keys.Tab) && !_previousKeyboardState.IsKeyDown(Keys.Tab))
@@ -498,7 +577,7 @@ public class Game1 : Game
             }
         }
 
-        // Escape closes inventory/letter first, then exits game
+        // Escape closes inventory/letter first, then pauses
         if (currentKeyState.IsKeyDown(Keys.Escape) && !_previousKeyboardState.IsKeyDown(Keys.Escape))
         {
             if (_letterUI.IsOpen)
@@ -509,7 +588,7 @@ public class Game1 : Game
             else if (_inventoryOpen)
                 _inventoryOpen = false;
             else
-                Exit();
+                _gameState = GameState.Paused;
         }
 
         // Death fade-out
@@ -748,18 +827,32 @@ public class Game1 : Game
         }
 
         _previousKeyboardState = currentKeyState;
+        _previousMouseState = mouseState;
         base.Update(gameTime);
     }
 
     protected override void Draw(GameTime gameTime)
     {
+        // Pass 1: render to virtual-resolution render target
+        GraphicsDevice.SetRenderTarget(_renderTarget);
+        GraphicsDevice.Clear(Color.Black);
+
+        // Main menu screen
+        if (_gameState == GameState.MainMenu)
+        {
+            var virtualMouse = GetVirtualMousePosition(Mouse.GetState());
+            _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+            _mainMenuUI.Draw(_spriteBatch, virtualMouse);
+            _spriteBatch.End();
+
+            DrawCursorAndPresent();
+            base.Draw(gameTime);
+            return;
+        }
+
         int worldPixelWidth = _tilemap.MapWidth * _tilemap.ScaledTileSize;
         int worldPixelHeight = _tilemap.MapHeight * _tilemap.ScaledTileSize;
         _camera.Follow(_playerPosition, worldPixelWidth, worldPixelHeight);
-
-        // Pass 1: render world to virtual-resolution render target
-        GraphicsDevice.SetRenderTarget(_renderTarget);
-        GraphicsDevice.Clear(Color.Black);
 
         var visibleArea = new Rectangle(
             (int)_camera.Position.X,
@@ -933,26 +1026,27 @@ public class Game1 : Game
             _spriteBatch.End();
         }
 
-        // Custom cursor
-        if (_destinationRect.Width > 0 && _destinationRect.Height > 0)
+        // Pause menu overlay
+        if (_gameState == GameState.Paused)
         {
-            var mouseState = Mouse.GetState();
-            // Convert destination rect to logical space for correct mouse mapping on macOS retina
-            float retinaScale = (float)GraphicsDevice.Viewport.Width / Math.Max(1, Window.ClientBounds.Width);
-            float logDestX = _destinationRect.X / retinaScale;
-            float logDestW = _destinationRect.Width / retinaScale;
-            float logDestY = _destinationRect.Y / retinaScale;
-            float logDestH = _destinationRect.Height / retinaScale;
-            float vx = (mouseState.X - logDestX) * _viewport.Width / logDestW;
-            float vy = (mouseState.Y - logDestY) * _viewport.Height / logDestH;
-            vx = MathHelper.Clamp(vx, 0, _viewport.Width - 1);
-            vy = MathHelper.Clamp(vy, 0, _viewport.Height - 1);
-
-            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            _spriteBatch.Draw(_cursorTexture, new Vector2(vx, vy), null,
-                Color.White, 0f, Vector2.Zero, 1.875f, SpriteEffects.None, 0f);
+            var virtualMouse = GetVirtualMousePosition(Mouse.GetState());
+            _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+            _pauseMenuUI.Draw(_spriteBatch, virtualMouse);
             _spriteBatch.End();
         }
+
+        DrawCursorAndPresent();
+        base.Draw(gameTime);
+    }
+
+    private void DrawCursorAndPresent()
+    {
+        // Custom cursor
+        var virtualMouse = GetVirtualMousePosition(Mouse.GetState());
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+        _spriteBatch.Draw(_cursorTexture, virtualMouse, null,
+            Color.White, 0f, Vector2.Zero, 1.875f, SpriteEffects.None, 0f);
+        _spriteBatch.End();
 
         // Pass 2: draw render target scaled to window with letterboxing
         GraphicsDevice.SetRenderTarget(null);
@@ -961,8 +1055,6 @@ public class Game1 : Game
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
         _spriteBatch.Draw(_renderTarget, _destinationRect, Color.White);
         _spriteBatch.End();
-
-        base.Draw(gameTime);
     }
 
     private void RefreshViewportFromWindow()
