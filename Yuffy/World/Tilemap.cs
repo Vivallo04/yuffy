@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Yuffy.Graphics;
+namespace Yuffy.World;
 
 public class Tilemap
 {
@@ -62,6 +62,9 @@ public class Tilemap
         CoastInnerSE, CoastInnerSW, CoastInnerNE, CoastInnerNW
     };
 
+    private const int GrassBiomeOffset = 5;
+    private const int BeachRowsFromBottom = 8;
+
     public float Scale { get; set; } = 1f;
 
     public int MapWidth => _map.GetLength(1);
@@ -70,12 +73,12 @@ public class Tilemap
 
     public bool IsGrassBiomeRow(int row)
     {
-        return row > MapHeight / 2 + 5;
+        return row > MapHeight / 2 + GrassBiomeOffset;
     }
 
     public bool IsBeachRow(int row)
     {
-        return row >= MapHeight - 8;
+        return row >= MapHeight - BeachRowsFromBottom;
     }
 
     public int GetTileAt(int col, int row)
@@ -93,7 +96,8 @@ public class Tilemap
 
     public void BlockTile(int col, int row)
     {
-        _blockedTiles.Add(new Point(col, row));
+        if (row >= 0 && row < MapHeight && col >= 0 && col < MapWidth)
+            _blockedTiles.Add(new Point(col, row));
     }
 
     public bool IsTileBlocked(int col, int row)
@@ -105,6 +109,8 @@ public class Tilemap
 
     public Tilemap(Texture2D tileset, int[,] map, int tileSize = 16)
     {
+        ArgumentNullException.ThrowIfNull(tileset);
+        ArgumentNullException.ThrowIfNull(map);
         _tileset = tileset;
         _map = map;
         _tileSize = tileSize;
@@ -153,7 +159,7 @@ public class Tilemap
                 if (isSouthDiagonal && row < MapHeight - 1 && IsWaterTile(_map[row + 1, col]))
                 {
                     position.Y -= _tileSize * Scale;
-                    int fillWaterTileId = IsWaterTile(_map[row + 1, col]) ? _map[row + 1, col] : WaterTileId;
+                    int fillWaterTileId = _map[row + 1, col];
                     int fillWaterSrcCol = fillWaterTileId % _tilesPerRow;
                     int fillWaterSrcRow = fillWaterTileId / _tilesPerRow;
                     var fillWaterRect = new Rectangle(
@@ -653,26 +659,6 @@ public class Tilemap
         for (int col = width - 2; col >= 0; col--)
         {
             oceanEdge[col] = Math.Clamp(oceanEdge[col], oceanEdge[col + 1] - 1, oceanEdge[col + 1] + 1);
-        }
-
-        // Remove isolated one-column spikes/holes that create vertical water "pillars".
-        for (int col = 1; col < width - 1; col++)
-        {
-            int left = oceanEdge[col - 1];
-            int current = oceanEdge[col];
-            int right = oceanEdge[col + 1];
-
-            if (left == right && current != left)
-                oceanEdge[col] = left;
-        }
-        for (int col = 1; col < width - 1; col++)
-        {
-            int left = oceanEdge[col - 1];
-            int current = oceanEdge[col];
-            int right = oceanEdge[col + 1];
-
-            if (left == right && current != left)
-                oceanEdge[col] = left;
         }
 
         for (int col = 0; col < width; col++)

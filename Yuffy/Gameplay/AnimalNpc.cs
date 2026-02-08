@@ -1,9 +1,10 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Yuffy.Graphics;
+using Yuffy.Rendering;
+using Yuffy.World;
 
-namespace Yuffy;
+namespace Yuffy.Gameplay;
 
 public class AnimalNpc
 {
@@ -67,6 +68,7 @@ public class AnimalNpc
             }
         }
 
+        System.Diagnostics.Debug.WriteLine("Warning: AnimalNpc failed to find valid grass spawn after 100 attempts");
         _position = new Vector2(scaledTile / 2f, scaledTile / 2f);
     }
 

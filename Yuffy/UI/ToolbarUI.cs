@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Yuffy.Gameplay;
+using Yuffy.Rendering;
 
-namespace Yuffy;
+namespace Yuffy.UI;
 
 public class ToolbarUI
 {
@@ -10,6 +12,7 @@ public class ToolbarUI
     private readonly Dictionary<ItemType, Texture2D> _itemTextures;
     private readonly Inventory _inventory;
     private readonly SpriteFont _font;
+    private readonly VirtualViewport _viewport;
 
     public int SelectedSlot { get; set; }
 
@@ -19,8 +22,7 @@ public class ToolbarUI
     private const int Border = 2;
     private const float IconScale = 2.4f;
     private const float NumberScale = 0.35f;
-    private const int ScreenWidth = 960;
-    private const int ScreenHeight = 540;
+    private const int BarWidth = SlotCount * SlotSize + (SlotCount - 1) * SlotGap;
 
     private static readonly Color BgColor = new(0, 0, 0, 150);
     private static readonly Color BorderColor = new(80, 80, 80, 200);
@@ -28,39 +30,35 @@ public class ToolbarUI
     private static readonly Color NumberColor = Color.White;
     private static readonly Color NumberShadowColor = new(40, 25, 20);
 
-    // Calculated layout
-    private readonly int _barY;
-    private readonly int _slotsStartX;
-    private readonly int _slotsStartY;
-
     public ToolbarUI(Texture2D pixel, Dictionary<ItemType, Texture2D> itemTextures, Inventory inventory,
-        SpriteFont font)
+        SpriteFont font, VirtualViewport viewport)
     {
         _pixel = pixel;
         _itemTextures = itemTextures;
         _inventory = inventory;
         _font = font;
-
-        int barWidth = SlotCount * SlotSize + (SlotCount - 1) * SlotGap;
-        int barX = (ScreenWidth - barWidth) / 2;
-        _barY = ScreenHeight - SlotSize - 8;
-        _slotsStartX = barX;
-        _slotsStartY = _barY;
+        _viewport = viewport;
     }
+
+    private int SlotsStartX => (_viewport.Width - BarWidth) / 2;
+    private int SlotsStartY => _viewport.Height - SlotSize - 8;
 
     public int GetSlotCenterX(int slot)
     {
-        return _slotsStartX + slot * (SlotSize + SlotGap) + SlotSize / 2;
+        return SlotsStartX + slot * (SlotSize + SlotGap) + SlotSize / 2;
     }
 
-    public int GetBarTopY() => _barY;
+    public int GetBarTopY() => SlotsStartY;
 
     public void Draw(SpriteBatch spriteBatch)
     {
+        int startX = SlotsStartX;
+        int startY = SlotsStartY;
+
         for (int i = 0; i < SlotCount; i++)
         {
-            int x = _slotsStartX + i * (SlotSize + SlotGap);
-            int y = _slotsStartY;
+            int x = startX + i * (SlotSize + SlotGap);
+            int y = startY;
 
             // Background fill
             spriteBatch.Draw(_pixel, new Rectangle(x, y, SlotSize, SlotSize), BgColor);

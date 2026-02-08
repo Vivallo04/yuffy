@@ -1,9 +1,10 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Yuffy.Graphics;
+using Yuffy.Rendering;
+using Yuffy.World;
 
-namespace Yuffy;
+namespace Yuffy.Gameplay;
 
 public class SkeletonNpc
 {
@@ -93,6 +94,7 @@ public class SkeletonNpc
             return;
         }
 
+        System.Diagnostics.Debug.WriteLine("Warning: SkeletonNpc failed to find valid spawn after 200 attempts");
         _position = new Vector2(scaledTile / 2f, scaledTile / 2f);
     }
 
@@ -183,7 +185,7 @@ public class SkeletonNpc
         if (_state == State.Dying || _state == State.Dead) return;
         _state = State.Dying;
         _sprite.Animation = _deathAnimation;
-        _deathAnimTimer = 10 * (1.0f / 8.0f);
+        _deathAnimTimer = (float)_deathAnimation.Duration;
     }
 
     private void EnterIdleState()
@@ -219,7 +221,7 @@ public class SkeletonNpc
     {
         _state = State.Attack;
         _sprite.Animation = _attackAnimation;
-        _stateTimer = 7 * (1.0f / 10.0f);
+        _stateTimer = (float)_attackAnimation.Duration;
         UpdateFacing(playerPos - _position);
     }
 
@@ -245,6 +247,15 @@ public class SkeletonNpc
         Vector2 nextPosition = _position + _direction * speed * dt;
         if (IsPositionValid(nextPosition))
             _position = nextPosition;
+        else if (_state == State.Chase)
+        {
+            Vector2 slideX = _position + new Vector2(_direction.X * speed * dt, 0);
+            Vector2 slideY = _position + new Vector2(0, _direction.Y * speed * dt);
+            if (IsPositionValid(slideX))
+                _position = slideX;
+            else if (IsPositionValid(slideY))
+                _position = slideY;
+        }
         else if (_state == State.Wander)
             EnterIdleState();
     }

@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Xna.Framework;
 
-namespace Yuffy.Graphics;
+namespace Yuffy.Rendering;
 
 public class AnimatedSprite : Sprite
 {
@@ -16,6 +16,7 @@ public class AnimatedSprite : Sprite
         {
             if (_animation == value) return;
             _animation = value;
+            if (_animation == null || _animation.Frames.Count == 0) return;
             _currentFrame = 0;
             _elapsed = TimeSpan.Zero;
             Region = _animation.Frames[0];
@@ -36,10 +37,9 @@ public class AnimatedSprite : Sprite
         _elapsed = elapsed;
         Region = _animation.Frames[_currentFrame];
     }
-
     public void Update(GameTime gameTime)
     {
-        if (_animation == null) return;
+        if (_animation == null || _animation.Frames.Count == 0 || _animation.Delay <= TimeSpan.Zero) return;
 
         _elapsed += gameTime.ElapsedGameTime;
 

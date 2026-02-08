@@ -1,19 +1,24 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using Yuffy.Graphics;
+using Yuffy.Gameplay;
+using Yuffy.Rendering;
+using Yuffy.UI;
+using Yuffy.World;
 
-namespace Yuffy;
+namespace Yuffy.Core;
 
 public class Game1 : Game
 {
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
 
-    private const int VirtualWidth = 960;
-    private const int VirtualHeight = 540;
+    private readonly Random _rng = new();
+    private readonly List<(float y, Action<SpriteBatch> draw)> _drawList = new();
+    private readonly VirtualViewport _viewport = new();
 
     private RenderTarget2D _renderTarget;
     private Camera _camera;
@@ -102,7 +107,7 @@ public class Game1 : Game
         _graphics.PreferredBackBufferWidth = 1280;
         _graphics.PreferredBackBufferHeight = 720;
         Window.AllowUserResizing = true;
-        Window.ClientSizeChanged += OnClientSizeChanged;
+        Window.ClientSizeChanged += (_, _) => RefreshViewportFromWindow();
     }
 
     protected override void Initialize()
@@ -113,9 +118,9 @@ public class Game1 : Game
     protected override void LoadContent()
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
-        _renderTarget = new RenderTarget2D(GraphicsDevice, VirtualWidth, VirtualHeight);
-        _camera = new Camera(VirtualWidth, VirtualHeight);
-        UpdateDestinationRect();
+        RefreshViewportFromWindow();
+        _renderTarget = new RenderTarget2D(GraphicsDevice, _viewport.Width, _viewport.Height);
+        _camera = new Camera(_viewport);
 
         Texture2D idleTexture = Content.Load<Texture2D>("images/tilesets/Characters/Human/IDLE/base_idle_strip9");
         Texture2D walkTexture = Content.Load<Texture2D>("images/tilesets/Characters/Human/WALKING/base_walk_strip8");
@@ -300,19 +305,18 @@ public class Game1 : Game
         Texture2D cowTexture = Content.Load<Texture2D>("images/tilesets/Elements/Animals/spr_deco_cow_strip4");
         Texture2D chickenTexture = Content.Load<Texture2D>("images/tilesets/Elements/Animals/spr_deco_chicken_01_strip4");
 
-        Random animalRng = new Random();
         _animals = new List<AnimalNpc>();
 
         for (int i = 0; i < 6; i++)
         {
-            var cow = new AnimalNpc(cowTexture, _tilemap, 30f, animalRng);
+            var cow = new AnimalNpc(cowTexture, _tilemap, 30f, _rng);
             cow.SpawnAtRandomGrass();
             _animals.Add(cow);
         }
 
         for (int i = 0; i < 10; i++)
         {
-            var chicken = new AnimalNpc(chickenTexture, _tilemap, 60f, animalRng);
+            var chicken = new AnimalNpc(chickenTexture, _tilemap, 60f, _rng);
             chicken.SpawnAtRandomGrass();
             _animals.Add(chicken);
         }
@@ -420,24 +424,41 @@ public class Game1 : Game
         _labelMiddle = Content.Load<Texture2D>("images/tilesets/UI/label_middle");
         _labelRight = Content.Load<Texture2D>("images/tilesets/UI/label_right");
 
-        _inventoryUI = new InventoryUI(nineSliceBox, _pixelTexture, itemTextures, _inventory);
-        _toolbarUI = new ToolbarUI(_pixelTexture, itemTextures, _inventory, _minecraftFont);
-        _snowParticles = new SnowParticles(_pixelTexture, VirtualWidth, VirtualHeight);
+        _inventoryUI = new InventoryUI(nineSliceBox, _pixelTexture, itemTextures, _inventory, _viewport);
+        _toolbarUI = new ToolbarUI(_pixelTexture, itemTextures, _inventory, _minecraftFont, _viewport);
+        _snowParticles = new SnowParticles(_pixelTexture, _viewport);
 
         _indicatorTexture = Content.Load<Texture2D>("images/tilesets/UI/indicator");
-        _letterUI = new LetterUI(nineSliceBox, _minecraftFont, _pixelTexture);
+        _letterUI = new LetterUI(nineSliceBox, _minecraftFont, _pixelTexture, _viewport);
         string letterPath = System.IO.Path.Combine(Content.RootDirectory, "letter.txt");
-        _letterUI.Text = System.IO.File.ReadAllText(letterPath);
+        try
+        {
+            _letterUI.Text = System.IO.File.ReadAllText(letterPath);
+        }
+        catch (System.IO.FileNotFoundException ex)
+        {
+            _letterUI.Text = "Letter content not found.";
+            Console.WriteLine($"Letter file not found: {ex.Message}");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _letterUI.Text = "Unable to access letter file due to permissions.";
+            Console.WriteLine($"Unauthorized access to letter file: {ex.Message}");
+        }
+        catch (System.IO.IOException ex)
+        {
+            _letterUI.Text = "Error reading letter file.";
+            Console.WriteLine($"I/O error reading letter file: {ex.Message}\n{ex.StackTrace}");
+        }
         _mushroomTexture = Content.Load<Texture2D>("images/tilesets/UI/playercount");
 
-        Random mushRng = new Random();
         _collectibles = new List<Collectible>();
         for (int i = 0; i < 35; i++)
         {
             for (int attempt = 0; attempt < 100; attempt++)
             {
-                int col = mushRng.Next(3, _tilemap.MapWidth - 3);
-                int row = mushRng.Next(3, _tilemap.MapHeight - 3);
+                int col = _rng.Next(3, _tilemap.MapWidth - 3);
+                int row = _rng.Next(3, _tilemap.MapHeight - 3);
                 if (_tilemap.IsTileBlocked(col, row)) continue;
                 int st = _tilemap.ScaledTileSize;
                 var pos = new Vector2(col * st + st / 2f, row * st + st / 2f);
@@ -448,7 +469,7 @@ public class Game1 : Game
 
         var sandTimerTex = Content.Load<Texture2D>("images/tilesets/UI/sandtimer");
         _miniGameUI = new MiniGameUI(_minecraftFont, _mushroomTexture, itemDisc,
-            _labelLeft, _labelMiddle, _labelRight, sandTimerTex);
+            _labelLeft, _labelMiddle, _labelRight, sandTimerTex, _viewport);
         _miniGameUI.IsActive = true;
     }
 
@@ -595,12 +616,11 @@ public class Game1 : Game
         {
             _skeletonsSpawnedThisNight = true;
             _skeletonsDyingTriggered = false;
-            Random skelRng = new Random();
-            int count = skelRng.Next(10, 16);
+            int count = _rng.Next(10, 16);
             for (int i = 0; i < count; i++)
             {
                 var skel = new SkeletonNpc(_skelIdleTex, _skelWalkTex, _skelAttackTex,
-                    _skelHurtTex, _skelDeathTex, _skelJumpTex, _alertTexture, _tilemap, skelRng);
+                    _skelHurtTex, _skelDeathTex, _skelJumpTex, _alertTexture, _tilemap, _rng);
                 skel.SpawnAtRandom(_playerPosition);
                 _skeletons.Add(skel);
             }
@@ -611,12 +631,11 @@ public class Game1 : Game
         {
             _goblinsSpawnedThisNight = true;
             _goblinsDyingTriggered = false;
-            Random gobRng = new Random();
-            int gobCount = gobRng.Next(18, 25);
+            int gobCount = _rng.Next(18, 25);
             for (int i = 0; i < gobCount; i++)
             {
                 var gob = new GoblinNpc(_gobIdleTex, _gobWalkTex, _gobAttackTex,
-                    _gobHurtTex, _gobDeathTex, _gobJumpTex, _alertTexture, _tilemap, gobRng);
+                    _gobHurtTex, _gobDeathTex, _gobJumpTex, _alertTexture, _tilemap, _rng);
                 gob.SpawnAtRandom(_playerPosition);
                 _goblins.Add(gob);
             }
@@ -696,10 +715,7 @@ public class Game1 : Game
         foreach (var c in _collectibles)
             c.Update((float)gameTime.ElapsedGameTime.TotalSeconds, _playerPosition);
 
-        int collected = 0;
-        foreach (var c in _collectibles)
-            if (c.Collected) collected++;
-
+        int collected = _collectibles.Count(c => c.Collected);
         _miniGameUI.Collected = collected;
         if (collected >= _miniGameUI.Target && !_miniGameUI.Won)
             _miniGameUI.TriggerWin();
@@ -748,8 +764,8 @@ public class Game1 : Game
         var visibleArea = new Rectangle(
             (int)_camera.Position.X,
             (int)_camera.Position.Y,
-            VirtualWidth,
-            VirtualHeight
+            _viewport.Width,
+            _viewport.Height
         );
 
         _spriteBatch.Begin(
@@ -767,9 +783,9 @@ public class Game1 : Game
         foreach (var crop in _crops)
             crop.DrawCrop(_spriteBatch);
 
-        var drawList = new List<(float y, Action<SpriteBatch> draw)>();
+        _drawList.Clear();
 
-        drawList.Add((_playerPosition.Y, sb =>
+        _drawList.Add((_playerPosition.Y, sb =>
         {
             _player.Draw(sb, _playerPosition);
             _hair.Draw(sb, _playerPosition);
@@ -778,44 +794,44 @@ public class Game1 : Game
         foreach (var animal in _animals)
         {
             var a = animal;
-            drawList.Add((a.Y, sb => a.Draw(sb)));
+            _drawList.Add((a.Y, sb => a.Draw(sb)));
         }
 
         foreach (var tree in _trees)
         {
             var t = tree;
-            drawList.Add((t.Y, sb => t.Draw(sb)));
+            _drawList.Add((t.Y, sb => t.Draw(sb)));
         }
 
         foreach (var (sprite, pos) in _snowDecorations)
         {
             var s = sprite;
             var p = pos;
-            drawList.Add((p.Y, sb => s.Draw(sb, p)));
+            _drawList.Add((p.Y, sb => s.Draw(sb, p)));
         }
 
         foreach (var skel in _skeletons)
         {
             var sk = skel;
-            drawList.Add((sk.Y, sb => sk.Draw(sb)));
+            _drawList.Add((sk.Y, sb => sk.Draw(sb)));
         }
 
         foreach (var gob in _goblins)
         {
             var g = gob;
-            drawList.Add((g.Y, sb => g.Draw(sb)));
+            _drawList.Add((g.Y, sb => g.Draw(sb)));
         }
 
         foreach (var c in _collectibles)
         {
             var coll = c;
             if (!coll.Collected)
-                drawList.Add((coll.Y, sb => coll.Draw(sb)));
+                _drawList.Add((coll.Y, sb => coll.Draw(sb)));
         }
 
-        drawList.Sort((a, b) => a.y.CompareTo(b.y));
+        _drawList.Sort((a, b) => a.y.CompareTo(b.y));
 
-        foreach (var entry in drawList)
+        foreach (var entry in _drawList)
             entry.draw(_spriteBatch);
 
         _spriteBatch.End();
@@ -825,7 +841,7 @@ public class Game1 : Game
         if (tint.A > 0)
         {
             _spriteBatch.Begin(blendState: BlendState.AlphaBlend);
-            _spriteBatch.Draw(_pixelTexture, new Rectangle(0, 0, VirtualWidth, VirtualHeight), tint);
+            _spriteBatch.Draw(_pixelTexture, new Rectangle(0, 0, _viewport.Width, _viewport.Height), tint);
             _spriteBatch.End();
         }
 
@@ -834,13 +850,13 @@ public class Game1 : Game
         {
             float alpha = MathHelper.Clamp(_deathFadeTimer / 2.0f, 0f, 1f);
             _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
-            _spriteBatch.Draw(_pixelTexture, new Rectangle(0, 0, VirtualWidth, VirtualHeight),
+            _spriteBatch.Draw(_pixelTexture, new Rectangle(0, 0, _viewport.Width, _viewport.Height),
                 new Color(0, 0, 0, (int)(alpha * 200)));
             float iconScale = 4f;
             int iconW = (int)(_deathIconTexture.Width * iconScale);
             int iconH = (int)(_deathIconTexture.Height * iconScale);
             _spriteBatch.Draw(_deathIconTexture,
-                new Rectangle(VirtualWidth / 2 - iconW / 2, VirtualHeight / 2 - iconH / 2, iconW, iconH),
+                new Rectangle(_viewport.Width / 2 - iconW / 2, _viewport.Height / 2 - iconH / 2, iconW, iconH),
                 new Color(255, 255, 255, (int)(alpha * 255)));
             _spriteBatch.End();
         }
@@ -911,7 +927,7 @@ public class Game1 : Game
         if (_inventoryOpen)
         {
             _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
-            _spriteBatch.Draw(_pixelTexture, new Rectangle(0, 0, VirtualWidth, VirtualHeight),
+            _spriteBatch.Draw(_pixelTexture, new Rectangle(0, 0, _viewport.Width, _viewport.Height),
                 new Color(0, 0, 0, 120));
             _inventoryUI.Draw(_spriteBatch);
             _spriteBatch.End();
@@ -921,10 +937,16 @@ public class Game1 : Game
         if (_destinationRect.Width > 0 && _destinationRect.Height > 0)
         {
             var mouseState = Mouse.GetState();
-            float vx = (mouseState.X - _destinationRect.X) * (float)VirtualWidth / _destinationRect.Width;
-            float vy = (mouseState.Y - _destinationRect.Y) * (float)VirtualHeight / _destinationRect.Height;
-            vx = MathHelper.Clamp(vx, 0, VirtualWidth - 1);
-            vy = MathHelper.Clamp(vy, 0, VirtualHeight - 1);
+            // Convert destination rect to logical space for correct mouse mapping on macOS retina
+            float retinaScale = (float)GraphicsDevice.Viewport.Width / Math.Max(1, Window.ClientBounds.Width);
+            float logDestX = _destinationRect.X / retinaScale;
+            float logDestW = _destinationRect.Width / retinaScale;
+            float logDestY = _destinationRect.Y / retinaScale;
+            float logDestH = _destinationRect.Height / retinaScale;
+            float vx = (mouseState.X - logDestX) * _viewport.Width / logDestW;
+            float vy = (mouseState.Y - logDestY) * _viewport.Height / logDestH;
+            vx = MathHelper.Clamp(vx, 0, _viewport.Width - 1);
+            vy = MathHelper.Clamp(vy, 0, _viewport.Height - 1);
 
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             _spriteBatch.Draw(_cursorTexture, new Vector2(vx, vy), null,
@@ -943,27 +965,26 @@ public class Game1 : Game
         base.Draw(gameTime);
     }
 
-    private void OnClientSizeChanged(object sender, EventArgs e)
+    private void RefreshViewportFromWindow()
     {
-        UpdateDestinationRect();
-    }
+        int logicalW = Window.ClientBounds.Width;
+        int logicalH = Window.ClientBounds.Height;
+        _viewport.Refresh(logicalW, logicalH);
 
-    private void UpdateDestinationRect()
-    {
-        int windowWidth = GraphicsDevice.Viewport.Width;
-        int windowHeight = GraphicsDevice.Viewport.Height;
+        if (_viewport.SizeChanged)
+        {
+            _renderTarget?.Dispose();
+            _renderTarget = new RenderTarget2D(GraphicsDevice, _viewport.Width, _viewport.Height);
+            _viewport.SizeChanged = false;
+        }
 
-        float scaleX = (float)windowWidth / VirtualWidth;
-        float scaleY = (float)windowHeight / VirtualHeight;
-        float scale = Math.Min(scaleX, scaleY);
-
-        int scaledWidth = (int)(VirtualWidth * scale);
-        int scaledHeight = (int)(VirtualHeight * scale);
-
-        int offsetX = (windowWidth - scaledWidth) / 2;
-        int offsetY = (windowHeight - scaledHeight) / 2;
-
-        _destinationRect = new Rectangle(offsetX, offsetY, scaledWidth, scaledHeight);
+        // Blit rect in backbuffer pixel space
+        int bbW = GraphicsDevice.Viewport.Width;
+        int bbH = GraphicsDevice.Viewport.Height;
+        float scale = Math.Min((float)bbW / _viewport.Width, (float)bbH / _viewport.Height);
+        int sw = (int)(_viewport.Width * scale);
+        int sh = (int)(_viewport.Height * scale);
+        _destinationRect = new Rectangle((bbW - sw) / 2, (bbH - sh) / 2, sw, sh);
     }
 
     private Vector2 FindSafeSpawnPosition(int preferredCol, int preferredRow)
@@ -1037,5 +1058,16 @@ public class Game1 : Game
         int ca = (int)(MathHelper.Lerp(k0.a, k1.a, lerp) * 255);
 
         return new Color(cr, cg, cb, ca);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _pixelTexture?.Dispose();
+            _renderTarget?.Dispose();
+        }
+
+        base.Dispose(disposing);
     }
 }

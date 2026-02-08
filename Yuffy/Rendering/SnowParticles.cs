@@ -2,7 +2,7 @@ using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Yuffy;
+namespace Yuffy.Rendering;
 
 public class SnowParticles
 {
@@ -16,8 +16,7 @@ public class SnowParticles
     }
 
     private readonly Texture2D _pixel;
-    private readonly int _screenWidth;
-    private readonly int _screenHeight;
+    private readonly VirtualViewport _viewport;
     private readonly Random _rng;
     private readonly Flake[] _flakes;
     private float _time;
@@ -25,11 +24,10 @@ public class SnowParticles
     private static readonly Color FlakeColor = new(170, 200, 255, 200);
     private const int Count = 200;
 
-    public SnowParticles(Texture2D pixel, int screenWidth, int screenHeight)
+    public SnowParticles(Texture2D pixel, VirtualViewport viewport)
     {
         _pixel = pixel;
-        _screenWidth = screenWidth;
-        _screenHeight = screenHeight;
+        _viewport = viewport;
         _rng = new Random();
         _flakes = new Flake[Count];
 
@@ -42,8 +40,8 @@ public class SnowParticles
         return new Flake
         {
             Position = new Vector2(
-                _rng.Next(_screenWidth),
-                randomY ? _rng.Next(_screenHeight) : -_rng.Next(20)),
+                _rng.Next(_viewport.Width),
+                randomY ? _rng.Next(_viewport.Height) : -_rng.Next(20)),
             SpeedY = 20f + (float)_rng.NextDouble() * 30f,
             DriftX = 5f + (float)_rng.NextDouble() * 15f,
             Size = _rng.Next(2, 6),
@@ -60,7 +58,10 @@ public class SnowParticles
             _flakes[i].Position.Y += _flakes[i].SpeedY * deltaTime;
             _flakes[i].Position.X += _flakes[i].DriftX * MathF.Sin(_time + _flakes[i].Phase) * deltaTime;
 
-            if (_flakes[i].Position.Y > _screenHeight)
+            // Wrap X coordinate to keep flakes on screen
+            _flakes[i].Position.X = (_flakes[i].Position.X % _viewport.Width + _viewport.Width) % _viewport.Width;
+
+            if (_flakes[i].Position.Y > _viewport.Height)
                 _flakes[i] = SpawnFlake(randomY: false);
         }
     }

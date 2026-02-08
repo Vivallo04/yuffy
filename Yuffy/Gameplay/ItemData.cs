@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Yuffy;
+namespace Yuffy.Gameplay;
 
 public enum ItemType
 {

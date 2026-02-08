@@ -1,7 +1,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Yuffy.Graphics;
+namespace Yuffy.Rendering;
 
 public class Sprite
 {

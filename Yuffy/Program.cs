@@ -1,2 +1,2 @@
-﻿using var game = new Yuffy.Game1();
+﻿using var game = new Yuffy.Core.Game1();
 game.Run();

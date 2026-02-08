@@ -1,8 +1,9 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Yuffy.Rendering;
 
-namespace Yuffy;
+namespace Yuffy.UI;
 
 public class MiniGameUI
 {
@@ -13,6 +14,7 @@ public class MiniGameUI
     private readonly Texture2D _labelMiddle;
     private readonly Texture2D _labelRight;
     private readonly Texture2D _sandTimerIcon;
+    private readonly VirtualViewport _viewport;
 
     public int Collected { get; set; }
     public int Target { get; set; } = 20;
@@ -25,15 +27,13 @@ public class MiniGameUI
 
     private const float FontScale = 0.8f;
     private const int Scale = 2;
-    private const int ScreenWidth = 960;
-    private const int ScreenHeight = 540;
     private static readonly Color TextColor = Color.White;
     private static readonly Color TimerTextColor = Color.White;
     private static readonly Color TimerShadowColor = new(40, 25, 20);
 
     public MiniGameUI(SpriteFont font, Texture2D icon, Texture2D disc,
         Texture2D labelLeft, Texture2D labelMiddle, Texture2D labelRight,
-        Texture2D sandTimerIcon)
+        Texture2D sandTimerIcon, VirtualViewport viewport)
     {
         _font = font;
         _icon = icon;
@@ -42,6 +42,7 @@ public class MiniGameUI
         _labelMiddle = labelMiddle;
         _labelRight = labelRight;
         _sandTimerIcon = sandTimerIcon;
+        _viewport = viewport;
     }
 
     public void Update(float deltaTime)
@@ -111,7 +112,7 @@ public class MiniGameUI
 
         // Position: bar anchored top-right
         int rightMargin = 10;
-        int barX = ScreenWidth - rightMargin - barTotalW;
+        int barX = _viewport.Width - rightMargin - barTotalW;
         int barY = topMargin;
 
         // Disc overlaps left edge of bar
@@ -164,8 +165,7 @@ public class MiniGameUI
         int discOverlap = discW / 2;
 
         // Position: below hearts (top-left)
-        // Hearts: x=10, y=10, height=48px (16px texture * 3 scale)
-        int barX = 10;
+        int barX = 10 + discW - discOverlap;
         int barY = 64;
 
         // Disc overlaps left edge of bar, centered vertically on bar
@@ -201,7 +201,7 @@ public class MiniGameUI
     {
         float bigScale = 3.0f;
         Vector2 size = _font.MeasureString(text) * bigScale;
-        Vector2 pos = new(ScreenWidth / 2f - size.X / 2f, ScreenHeight / 2f - size.Y / 2f);
+        Vector2 pos = new(_viewport.Width / 2f - size.X / 2f, _viewport.Height / 2f - size.Y / 2f);
         spriteBatch.DrawString(_font, text, pos, color,
             0f, Vector2.Zero, bigScale, SpriteEffects.None, 0f);
     }

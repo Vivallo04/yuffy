@@ -1,4 +1,4 @@
-namespace Yuffy;
+namespace Yuffy.Gameplay;
 
 public class Inventory
 {

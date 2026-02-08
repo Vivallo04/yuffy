@@ -1,8 +1,8 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Yuffy.Graphics;
+using Yuffy.Rendering;
 
-namespace Yuffy;
+namespace Yuffy.Gameplay;
 
 public class CropDecoration
 {

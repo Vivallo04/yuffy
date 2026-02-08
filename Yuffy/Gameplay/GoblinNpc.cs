@@ -1,9 +1,10 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Yuffy.Graphics;
+using Yuffy.Rendering;
+using Yuffy.World;
 
-namespace Yuffy;
+namespace Yuffy.Gameplay;
 
 public class GoblinNpc
 {
@@ -87,13 +88,45 @@ public class GoblinNpc
                 row * scaledTile + scaledTile / 2f
             );
 
-            if (Vector2.Distance(candidate, playerPos) < 300f) continue;
+            if (Vector2.Distance(candidate, playerPos) < DetectionRadius) continue;
 
             _position = candidate;
             return;
         }
 
-        _position = new Vector2(scaledTile / 2f, scaledTile / 2f);
+        // Fallback: spiral search outward from map center
+        int centerCol = _tilemap.MapWidth / 2;
+        int centerRow = _tilemap.MapHeight / 2;
+        for (int radius = 0; radius < Math.Max(_tilemap.MapWidth, _tilemap.MapHeight); radius++)
+        {
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                for (int dy = -radius; dy <= radius; dy++)
+                {
+                    if (Math.Abs(dx) != radius && Math.Abs(dy) != radius) continue;
+
+                    int col = centerCol + dx;
+                    int row = centerRow + dy;
+
+                    if (col < 0 || col >= _tilemap.MapWidth || row < 0 || row >= _tilemap.MapHeight)
+                        continue;
+
+                    if (_tilemap.IsTileBlocked(col, row)) continue;
+
+                    Vector2 candidate = new Vector2(
+                        col * scaledTile + scaledTile / 2f,
+                        row * scaledTile + scaledTile / 2f
+                    );
+
+                    if (Vector2.Distance(candidate, playerPos) < DetectionRadius) continue;
+
+                    _position = candidate;
+                    return;
+                }
+            }
+        }
+
+        throw new InvalidOperationException("Unable to find valid spawn location for GoblinNpc");
     }
 
     public int Update(GameTime gameTime, Vector2 playerPos)
@@ -183,7 +216,7 @@ public class GoblinNpc
         if (_state == State.Dying || _state == State.Dead) return;
         _state = State.Dying;
         _sprite.Animation = _deathAnimation;
-        _deathAnimTimer = 9 * (1.0f / 8.0f);
+        _deathAnimTimer = (float)_deathAnimation.Duration;
     }
 
     private void EnterIdleState()
@@ -219,7 +252,7 @@ public class GoblinNpc
     {
         _state = State.Attack;
         _sprite.Animation = _attackAnimation;
-        _stateTimer = 9 * (1.0f / 10.0f);
+        _stateTimer = (float)_attackAnimation.Duration;
         UpdateFacing(playerPos - _position);
     }
 
@@ -245,6 +278,15 @@ public class GoblinNpc
         Vector2 nextPosition = _position + _direction * speed * dt;
         if (IsPositionValid(nextPosition))
             _position = nextPosition;
+        else if (_state == State.Chase)
+        {
+            Vector2 slideX = _position + new Vector2(_direction.X * speed * dt, 0);
+            Vector2 slideY = _position + new Vector2(0, _direction.Y * speed * dt);
+            if (IsPositionValid(slideX))
+                _position = slideX;
+            else if (IsPositionValid(slideY))
+                _position = slideY;
+        }
         else if (_state == State.Wander)
             EnterIdleState();
     }
