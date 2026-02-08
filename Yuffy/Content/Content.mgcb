@@ -33,6 +33,16 @@
 /processor:TextureProcessor
 /build:images/tilesets/Characters/Human/WALKING/longhair_walk_strip8.png
 
+#begin images/tilesets/Characters/Human/RUN/base_run_strip8.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Human/RUN/base_run_strip8.png
+
+#begin images/tilesets/Characters/Human/RUN/longhair_run_strip8.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Human/RUN/longhair_run_strip8.png
+
 #begin images/tilesets/Tileset/spr_tileset_sunnysideworld_16px.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -62,3 +72,104 @@
 /importer:TextureImporter
 /processor:TextureProcessor
 /build:images/tilesets/Elements/Crops/soil_00.png
+
+#begin images/tilesets/Characters/Skeleton/PNG/skeleton_idle_strip6.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Skeleton/PNG/skeleton_idle_strip6.png
+
+#begin images/tilesets/Characters/Skeleton/PNG/skeleton_walk_strip8.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Skeleton/PNG/skeleton_walk_strip8.png
+
+#begin images/tilesets/Characters/Skeleton/PNG/skeleton_attack_strip7.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Skeleton/PNG/skeleton_attack_strip7.png
+
+#begin images/tilesets/Characters/Skeleton/PNG/skeleton_hurt_strip7.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Skeleton/PNG/skeleton_hurt_strip7.png
+
+#begin images/tilesets/Characters/Skeleton/PNG/skeleton_death_strip10.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Skeleton/PNG/skeleton_death_strip10.png
+
+#begin images/tilesets/Characters/Skeleton/PNG/skeleton_jump_strip10.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Skeleton/PNG/skeleton_jump_strip10.png
+
+#begin images/tilesets/UI/expression_love.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/expression_love.png
+
+#begin images/tilesets/UI/expression_alerted.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/expression_alerted.png
+
+#begin images/tilesets/UI/expression_attack.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/expression_attack.png
+
+#begin images/tilesets/Characters/Human/HURT/base_hurt_strip8.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Human/HURT/base_hurt_strip8.png
+
+#begin images/tilesets/Characters/Human/HURT/longhair_hurt_strip8.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Human/HURT/longhair_hurt_strip8.png
+
+#begin images/tilesets/Characters/Human/DEATH/base_death_strip13.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Human/DEATH/base_death_strip13.png
+
+#begin images/tilesets/Characters/Human/DEATH/longhair_death_strip13.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Human/DEATH/longhair_death_strip13.png
+
+#begin images/tilesets/UI/cursor_01.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/cursor_01.png
+
+#begin images/tilesets/Characters/Goblin/PNG/spr_idle_strip9.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Goblin/PNG/spr_idle_strip9.png
+
+#begin images/tilesets/Characters/Goblin/PNG/spr_walk_strip8.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Goblin/PNG/spr_walk_strip8.png
+
+#begin images/tilesets/Characters/Goblin/PNG/spr_attack_strip10.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Goblin/PNG/spr_attack_strip10.png
+
+#begin images/tilesets/Characters/Goblin/PNG/spr_hurt_strip8.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Goblin/PNG/spr_hurt_strip8.png
+
+#begin images/tilesets/Characters/Goblin/PNG/spr_death_strip13.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Goblin/PNG/spr_death_strip13.png
+
+#begin images/tilesets/Characters/Goblin/PNG/spr_jump_strip9.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/Characters/Goblin/PNG/spr_jump_strip9.png
+

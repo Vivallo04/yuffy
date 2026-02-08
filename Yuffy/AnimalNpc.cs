@@ -57,7 +57,7 @@ public class AnimalNpc
             int col = _rng.Next(_tilemap.MapWidth);
             int row = _rng.Next(_tilemap.MapHeight);
 
-            if (!_tilemap.IsTileBlocked(col, row))
+            if (!_tilemap.IsTileBlocked(col, row) && _tilemap.IsGrassBiomeRow(row))
             {
                 _position = new Vector2(
                     col * scaledTile + scaledTile / 2f,
