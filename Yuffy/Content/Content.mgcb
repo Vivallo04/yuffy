@@ -283,6 +283,11 @@
 /processor:TextureProcessor
 /build:images/tilesets/UI/label_right.png
 
+#begin images/tilesets/UI/sandtimer.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/sandtimer.png
+
 #begin images/tilesets/UI/expression_chat.png
 /importer:TextureImporter
 /processor:TextureProcessor

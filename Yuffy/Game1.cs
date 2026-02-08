@@ -66,6 +66,7 @@ public class Game1 : Game
     private Texture2D _heartTexture;
     private Texture2D _alertTexture;
     private Texture2D _deathIconTexture;
+    private Texture2D _labelLeft, _labelMiddle, _labelRight;
     private int _playerHp = 5;
     private const int MaxPlayerHp = 5;
     private float _playerDamageCooldown;
@@ -414,19 +415,20 @@ public class Game1 : Game
 
         _inventory = new Inventory();
 
-        _inventoryUI = new InventoryUI(nineSliceBox, itemDisc, itemTextures, _inventory);
-        _toolbarUI = new ToolbarUI(_pixelTexture, itemTextures, _inventory);
+        _minecraftFont = Content.Load<SpriteFont>("fonts/Minecraft");
+        _labelLeft = Content.Load<Texture2D>("images/tilesets/UI/label_left");
+        _labelMiddle = Content.Load<Texture2D>("images/tilesets/UI/label_middle");
+        _labelRight = Content.Load<Texture2D>("images/tilesets/UI/label_right");
+
+        _inventoryUI = new InventoryUI(nineSliceBox, _pixelTexture, itemTextures, _inventory);
+        _toolbarUI = new ToolbarUI(_pixelTexture, itemTextures, _inventory, _minecraftFont);
         _snowParticles = new SnowParticles(_pixelTexture, VirtualWidth, VirtualHeight);
 
-        _minecraftFont = Content.Load<SpriteFont>("fonts/Minecraft");
         _indicatorTexture = Content.Load<Texture2D>("images/tilesets/UI/indicator");
         _letterUI = new LetterUI(nineSliceBox, _minecraftFont, _pixelTexture);
         string letterPath = System.IO.Path.Combine(Content.RootDirectory, "letter.txt");
         _letterUI.Text = System.IO.File.ReadAllText(letterPath);
         _mushroomTexture = Content.Load<Texture2D>("images/tilesets/UI/playercount");
-        var labelLeft = Content.Load<Texture2D>("images/tilesets/UI/label_left");
-        var labelMiddle = Content.Load<Texture2D>("images/tilesets/UI/label_middle");
-        var labelRight = Content.Load<Texture2D>("images/tilesets/UI/label_right");
 
         Random mushRng = new Random();
         _collectibles = new List<Collectible>();
@@ -444,7 +446,9 @@ public class Game1 : Game
             }
         }
 
-        _miniGameUI = new MiniGameUI(_minecraftFont, _mushroomTexture, itemDisc, labelLeft, labelMiddle, labelRight);
+        var sandTimerTex = Content.Load<Texture2D>("images/tilesets/UI/sandtimer");
+        _miniGameUI = new MiniGameUI(_minecraftFont, _mushroomTexture, itemDisc,
+            _labelLeft, _labelMiddle, _labelRight, sandTimerTex);
         _miniGameUI.IsActive = true;
     }
 
@@ -841,22 +845,32 @@ public class Game1 : Game
             _spriteBatch.End();
         }
 
-        // Draw hearts HP (blink when damaged)
-        bool heartsVisible = _playerDamageCooldown <= 0 || (int)(_playerDamageCooldown * 10) % 2 == 0;
-        if (heartsVisible && _playerHp > 0)
+        // Draw hearts HP
         {
-            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
             int heartScale = 3;
             int heartW = _heartTexture.Width * heartScale;
             int heartH = _heartTexture.Height * heartScale;
             int heartPadding = 4;
             int heartStartX = 10;
             int heartStartY = 10;
-            for (int i = 0; i < _playerHp; i++)
+
+            bool heartsVisible = _playerDamageCooldown <= 0 || (int)(_playerDamageCooldown * 10) % 2 == 0;
+
+            for (int i = 0; i < MaxPlayerHp; i++)
             {
-                _spriteBatch.Draw(_heartTexture,
-                    new Rectangle(heartStartX + i * (heartW + heartPadding), heartStartY, heartW, heartH),
-                    Color.White);
+                var heartRect = new Rectangle(heartStartX + i * (heartW + heartPadding), heartStartY, heartW, heartH);
+                if (i < _playerHp)
+                {
+                    // Full heart (blink when damaged)
+                    if (heartsVisible)
+                        _spriteBatch.Draw(_heartTexture, heartRect, Color.White);
+                }
+                else
+                {
+                    // Empty heart silhouette
+                    _spriteBatch.Draw(_heartTexture, heartRect, new Color(50, 50, 50, 120));
+                }
             }
             _spriteBatch.End();
         }
@@ -870,13 +884,12 @@ public class Game1 : Game
         {
             float bob = MathF.Sin(_indicatorBob * 4f) * 6f;
             float indicatorScale = 3f;
-            int slotX = (VirtualWidth - (7 * 43 + 6 * 2)) / 2;
-            int slotCenterX = slotX + 43 / 2;
-            int slotTopY = VirtualHeight - 43 - 8;
+            int slotCenterX = _toolbarUI.GetSlotCenterX(0);
+            int barTopY = _toolbarUI.GetBarTopY();
             int indW = (int)(_indicatorTexture.Width * indicatorScale);
             int indH = (int)(_indicatorTexture.Height * indicatorScale);
             int indX = slotCenterX - indW / 2;
-            int indY = (int)(slotTopY - indH - 4 + bob);
+            int indY = (int)(barTopY - indH - 4 + bob);
             _spriteBatch.Draw(_indicatorTexture, new Rectangle(indX, indY, indW, indH), Color.White);
         }
         _spriteBatch.End();

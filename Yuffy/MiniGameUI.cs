@@ -12,6 +12,7 @@ public class MiniGameUI
     private readonly Texture2D _labelLeft;
     private readonly Texture2D _labelMiddle;
     private readonly Texture2D _labelRight;
+    private readonly Texture2D _sandTimerIcon;
 
     public int Collected { get; set; }
     public int Target { get; set; } = 20;
@@ -26,10 +27,13 @@ public class MiniGameUI
     private const int Scale = 2;
     private const int ScreenWidth = 960;
     private const int ScreenHeight = 540;
-    private static readonly Color TextColor = new(74, 49, 45);
+    private static readonly Color TextColor = Color.White;
+    private static readonly Color TimerTextColor = Color.White;
+    private static readonly Color TimerShadowColor = new(40, 25, 20);
 
     public MiniGameUI(SpriteFont font, Texture2D icon, Texture2D disc,
-        Texture2D labelLeft, Texture2D labelMiddle, Texture2D labelRight)
+        Texture2D labelLeft, Texture2D labelMiddle, Texture2D labelRight,
+        Texture2D sandTimerIcon)
     {
         _font = font;
         _icon = icon;
@@ -37,6 +41,7 @@ public class MiniGameUI
         _labelLeft = labelLeft;
         _labelMiddle = labelMiddle;
         _labelRight = labelRight;
+        _sandTimerIcon = sandTimerIcon;
     }
 
     public void Update(float deltaTime)
@@ -69,14 +74,8 @@ public class MiniGameUI
     {
         if (!IsActive) return;
 
-        // Timer top-center
-        int minutes = (int)TimeRemaining / 60;
-        int seconds = (int)TimeRemaining % 60;
-        string timerText = $"{minutes}:{seconds:D2}";
-        Vector2 timerSize = _font.MeasureString(timerText) * FontScale;
-        Vector2 timerPos = new(ScreenWidth / 2f - timerSize.X / 2f, 8);
-        spriteBatch.DrawString(_font, timerText, timerPos, TextColor,
-            0f, Vector2.Zero, FontScale, SpriteEffects.None, 0f);
+        // Timer with wooden backing (disc + 3-slice bar, centered at top)
+        DrawTimerLabel(spriteBatch);
 
         // Mushroom count label (disc + 3-slice bar + text)
         DrawCountLabel(spriteBatch);
@@ -89,6 +88,64 @@ public class MiniGameUI
             else if (Lost)
                 DrawCentered(spriteBatch, "TIME'S UP!", TextColor);
         }
+    }
+
+    private void DrawTimerLabel(SpriteBatch spriteBatch)
+    {
+        int minutes = (int)TimeRemaining / 60;
+        int seconds = (int)TimeRemaining % 60;
+        string timerText = $"{minutes}:{seconds:D2}";
+        Vector2 textSize = _font.MeasureString(timerText) * FontScale;
+
+        int capW = _labelLeft.Width * Scale;
+        int barH = _labelLeft.Height * Scale;
+        int textPad = 8;
+        int barInnerW = (int)textSize.X + textPad * 2;
+        int barTotalW = capW * 2 + barInnerW;
+
+        int discW = _disc.Width * Scale;
+        int discH = _disc.Height * Scale;
+        int discOverlap = discW / 2;
+
+        int topMargin = 8;
+
+        // Position: bar anchored top-right
+        int rightMargin = 10;
+        int barX = ScreenWidth - rightMargin - barTotalW;
+        int barY = topMargin;
+
+        // Disc overlaps left edge of bar
+        int discX = barX - discW + discOverlap;
+        int discY = barY + (barH - discH) / 2;
+
+        // Draw 3-slice label bar
+        spriteBatch.Draw(_labelLeft, new Rectangle(barX, barY, capW, barH), Color.White);
+        spriteBatch.Draw(_labelMiddle, new Rectangle(barX + capW, barY, barInnerW, barH), Color.White);
+        spriteBatch.Draw(_labelRight, new Rectangle(barX + capW + barInnerW, barY, capW, barH), Color.White);
+
+        // Draw text centered in visible bar area (right of disc overlap)
+        int visibleLeft = barX + discOverlap;
+        int visibleRight = barX + barTotalW;
+        float textX = visibleLeft + (visibleRight - visibleLeft - textSize.X) / 2f;
+        float textY = barY + (barH - textSize.Y) / 2f + 5;
+
+        // Shadow
+        spriteBatch.DrawString(_font, timerText, new Vector2(textX + 1, textY + 1), TimerShadowColor,
+            0f, Vector2.Zero, FontScale, SpriteEffects.None, 0f);
+        // Main text
+        spriteBatch.DrawString(_font, timerText, new Vector2(textX, textY), TimerTextColor,
+            0f, Vector2.Zero, FontScale, SpriteEffects.None, 0f);
+
+        // Draw disc (in front of bar)
+        spriteBatch.Draw(_disc, new Rectangle(discX, discY, discW, discH), Color.White);
+
+        // Draw sandtimer icon centered on disc
+        int iconScale = 3;
+        int iconW = _sandTimerIcon.Width * iconScale;
+        int iconH = _sandTimerIcon.Height * iconScale;
+        int iconX = discX + (discW - iconW) / 2;
+        int iconY = discY + (discH - iconH) / 2;
+        spriteBatch.Draw(_sandTimerIcon, new Rectangle(iconX, iconY, iconW, iconH), Color.White);
     }
 
     private void DrawCountLabel(SpriteBatch spriteBatch)
@@ -106,12 +163,10 @@ public class MiniGameUI
         int discH = _disc.Height * Scale;
         int discOverlap = discW / 2;
 
-        int rightMargin = 10;
-        int topMargin = 8;
-
-        // Position: bar anchored top-right
-        int barX = ScreenWidth - rightMargin - barTotalW;
-        int barY = topMargin;
+        // Position: below hearts (top-left)
+        // Hearts: x=10, y=10, height=48px (16px texture * 3 scale)
+        int barX = 10;
+        int barY = 64;
 
         // Disc overlaps left edge of bar, centered vertically on bar
         int discX = barX - discW + discOverlap;

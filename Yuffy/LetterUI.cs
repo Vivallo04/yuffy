@@ -29,7 +29,7 @@ public class LetterUI
     private const int Padding = 24;
     private const float FontScale = 1.0f;
     private const float ScrollSpeed = 120f;
-    private static readonly Color TextColor = new(74, 49, 45);
+    private static readonly Color TextColor = Color.White;
 
     public LetterUI(NineSliceBox box, SpriteFont font, Texture2D pixel)
     {
