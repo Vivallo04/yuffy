@@ -126,7 +126,7 @@ public class MiniGameUI
         int visibleLeft = barX + discOverlap;
         int visibleRight = barX + barTotalW;
         float textX = visibleLeft + (visibleRight - visibleLeft - textSize.X) / 2f;
-        float textY = barY + (barH - textSize.Y) / 2f + 1;
+        float textY = barY + (barH - textSize.Y) / 2f + 5;
         spriteBatch.DrawString(_font, countText, new Vector2(textX, textY), TextColor,
             0f, Vector2.Zero, FontScale, SpriteEffects.None, 0f);
 
