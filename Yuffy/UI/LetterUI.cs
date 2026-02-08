@@ -53,14 +53,15 @@ public class LetterUI
             _lastViewportWidth = _viewport.Width;
         }
 
-        float s = _viewport.OverlayScale;
+        float s = _viewport.Height / (float)VirtualViewport.BaseHeight;
+        int panelW = (int)(BasePanelWidth * s);
+        int panelH = (int)(BasePanelHeight * s);
         int padding = (int)(Padding * s);
+        float fontScale = FontScale * s;
 
         // Ensure wrapped lines and content height are up-to-date
         if (!_linesCached)
         {
-            int panelW = (int)(BasePanelWidth * s);
-            float fontScale = FontScale * s;
             float maxWidth = panelW - padding * 2;
             _wrappedLines = WrapText(Text, maxWidth, fontScale);
             _cachedLineHeight = _font.MeasureString("A").Y * fontScale + 2 * s;
@@ -68,7 +69,6 @@ public class LetterUI
             _linesCached = true;
         }
 
-        int panelH = (int)(BasePanelHeight * s);
         float maxScroll = Math.Max(0, _totalContentHeight - (panelH - padding * 2));
 
         if (keyState.IsKeyDown(Keys.Down) || keyState.IsKeyDown(Keys.S))
@@ -104,7 +104,7 @@ public class LetterUI
     {
         if (!IsOpen) return;
 
-        float s = _viewport.OverlayScale;
+        float s = _viewport.Height / (float)VirtualViewport.BaseHeight;
         int panelW = (int)(BasePanelWidth * s);
         int panelH = (int)(BasePanelHeight * s);
         int padding = (int)(Padding * s);

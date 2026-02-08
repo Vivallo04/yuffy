@@ -40,7 +40,7 @@ public class InventoryUI
 
     public void Draw(SpriteBatch spriteBatch)
     {
-        float s = _viewport.OverlayScale;
+        float s = _viewport.Height / (float)VirtualViewport.BaseHeight;
         int panelW = (int)(BasePanelWidth * s);
         int panelH = (int)(BasePanelHeight * s);
         int panelX = (_viewport.Width - panelW) / 2;

@@ -35,7 +35,7 @@ public class MainMenuUI
 
     public MenuAction Update(Vector2 virtualMouse, MouseState mouse, MouseState prevMouse)
     {
-        float s = _viewport.OverlayScale;
+        float s = _viewport.Height / (float)VirtualViewport.BaseHeight;
         int btnW = (int)(ButtonWidth * s);
         int btnH = (int)(ButtonHeight * s);
         int gap = (int)(ButtonGap * s);
@@ -59,7 +59,7 @@ public class MainMenuUI
 
     public void Draw(SpriteBatch spriteBatch, Vector2 virtualMouse)
     {
-        float s = _viewport.OverlayScale;
+        float s = _viewport.Height / (float)VirtualViewport.BaseHeight;
         int btnW = (int)(ButtonWidth * s);
         int btnH = (int)(ButtonHeight * s);
         int gap = (int)(ButtonGap * s);

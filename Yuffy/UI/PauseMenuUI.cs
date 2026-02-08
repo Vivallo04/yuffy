@@ -42,7 +42,7 @@ public class PauseMenuUI
 
     public PauseAction Update(Vector2 virtualMouse, MouseState mouse, MouseState prevMouse)
     {
-        float s = _viewport.OverlayScale;
+        float s = _viewport.Height / (float)VirtualViewport.BaseHeight;
         int panelW = (int)(PanelWidth * s);
         int panelH = (int)(PanelHeight * s);
         int btnW = (int)(ButtonWidth * s);
@@ -74,7 +74,7 @@ public class PauseMenuUI
 
     public void Draw(SpriteBatch spriteBatch, Vector2 virtualMouse)
     {
-        float s = _viewport.OverlayScale;
+        float s = _viewport.Height / (float)VirtualViewport.BaseHeight;
         int panelW = (int)(PanelWidth * s);
         int panelH = (int)(PanelHeight * s);
         int btnW = (int)(ButtonWidth * s);
@@ -147,7 +147,7 @@ public class PauseMenuUI
         else
             _buttonBox.Draw(spriteBatch, rect);
 
-        float fontScale = 0.8f * scale;
+        float fontScale = 0.65f * scale;
         var textSize = _font.MeasureString(text) * fontScale;
         var textPos = new Vector2(
             rect.X + (rect.Width - textSize.X) / 2f,

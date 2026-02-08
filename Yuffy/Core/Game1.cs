@@ -76,6 +76,7 @@ public class Game1 : Game
     private const int MaxPlayerHp = 5;
     private float _playerDamageCooldown;
     private float _deathFadeTimer;
+    private bool _deathFromTimer;
 
     private Texture2D _cursorTexture;
 
@@ -603,6 +604,12 @@ public class Game1 : Game
                     _tilemap.MapWidth / 2,
                     (int)(_tilemap.MapHeight * 0.75f)
                 );
+                if (_deathFromTimer)
+                {
+                    _deathFromTimer = false;
+                    _miniGameUI.IsActive = false;
+                    _miniGameUI.Lost = false;
+                }
             }
             _player.Update(gameTime);
             _hair.Update(gameTime);
@@ -800,6 +807,13 @@ public class Game1 : Game
             _miniGameUI.TriggerWin();
         _miniGameUI.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
 
+        // Timer ran out — kill the player
+        if (_miniGameUI.Lost && _deathFadeTimer <= 0 && _playerHp > 0)
+        {
+            _playerHp = 0;
+            _deathFromTimer = true;
+        }
+
         // Place letter in toolbar when all mushrooms collected
         if (_miniGameUI.Won && !_letterPlaced)
         {
@@ -945,12 +959,27 @@ public class Game1 : Game
             _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
             _spriteBatch.Draw(_pixelTexture, new Rectangle(0, 0, _viewport.Width, _viewport.Height),
                 new Color(0, 0, 0, (int)(alpha * 200)));
-            float iconScale = 4f;
-            int iconW = (int)(_deathIconTexture.Width * iconScale);
-            int iconH = (int)(_deathIconTexture.Height * iconScale);
-            _spriteBatch.Draw(_deathIconTexture,
-                new Rectangle(_viewport.Width / 2 - iconW / 2, _viewport.Height / 2 - iconH / 2, iconW, iconH),
-                new Color(255, 255, 255, (int)(alpha * 255)));
+
+            if (_deathFromTimer)
+            {
+                float textScale = 3.0f;
+                string msg = "TIME'S UP!";
+                Vector2 size = _minecraftFont.MeasureString(msg) * textScale;
+                Vector2 pos = new(_viewport.Width / 2f - size.X / 2f, _viewport.Height / 2f - size.Y / 2f);
+                _spriteBatch.DrawString(_minecraftFont, msg, pos,
+                    new Color(255, 255, 255, (int)(alpha * 255)),
+                    0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
+            }
+            else
+            {
+                float iconScale = 4f;
+                int iconW = (int)(_deathIconTexture.Width * iconScale);
+                int iconH = (int)(_deathIconTexture.Height * iconScale);
+                _spriteBatch.Draw(_deathIconTexture,
+                    new Rectangle(_viewport.Width / 2 - iconW / 2, _viewport.Height / 2 - iconH / 2, iconW, iconH),
+                    new Color(255, 255, 255, (int)(alpha * 255)));
+            }
+
             _spriteBatch.End();
         }
 
