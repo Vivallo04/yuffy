@@ -54,8 +54,8 @@ public class HeartParticles
                 Velocity = new Vector2(
                     MathF.Cos(angle) * speed,
                     MathF.Sin(angle) * speed - 180f),
-                Life = 1.8f + (float)_rng.NextDouble() * 0.8f,
-                Scale = 1.5f + (float)_rng.NextDouble() * 2f,
+                Life = 3.8f + (float)_rng.NextDouble() * 0.8f,
+                Scale = 3f + (float)_rng.NextDouble() * 3f,
                 Rotation = (float)(_rng.NextDouble() * MathHelper.TwoPi),
                 RotationSpeed = -3f + (float)_rng.NextDouble() * 6f
             };

@@ -122,30 +122,35 @@ public class LetterUI
             int panelX = (_viewport.Width - panelW) / 2;
             int panelY = (_viewport.Height - panelH) / 2;
             float contentTop = panelY + padding;
+            float contentBottom = panelY + panelH - padding;
             float textHeight = _wrappedLines.Count * _cachedLineHeight;
             float iconW = _confirmTex.Width * iconScale;
             float iconH = _confirmTex.Height * iconScale;
 
             float buttonsY = contentTop + textHeight + buttonGap - _scrollOffset;
 
-            // Accept and Reject label widths
-            float acceptLabelW = _font.MeasureString("Accept").X * fontScale;
-            float rejectLabelW = _font.MeasureString("Reject").X * fontScale;
-            float labelGap = 6 * s;
+            // Only process clicks if buttons are visible
+            if (buttonsY + iconH > contentTop && buttonsY < contentBottom)
+            {
+                // Accept and Reject label widths
+                float acceptLabelW = _font.MeasureString("Accept").X * fontScale;
+                float rejectLabelW = _font.MeasureString("Reject").X * fontScale;
+                float labelGap = 6 * s;
 
-            float acceptTotalW = iconW + labelGap + acceptLabelW;
-            float rejectTotalW = iconW + labelGap + rejectLabelW;
-            float spacing = 30 * s;
-            float totalW = acceptTotalW + spacing + rejectTotalW;
-            float startX = panelX + (panelW - totalW) / 2f;
+                float acceptTotalW = iconW + labelGap + acceptLabelW;
+                float rejectTotalW = iconW + labelGap + rejectLabelW;
+                float spacing = 30 * s;
+                float totalW = acceptTotalW + spacing + rejectTotalW;
+                float startX = panelX + (panelW - totalW) / 2f;
 
-            var rejectRect = new Rectangle((int)startX, (int)buttonsY, (int)rejectTotalW, (int)iconH);
-            var acceptRect = new Rectangle((int)(startX + rejectTotalW + spacing), (int)buttonsY, (int)acceptTotalW, (int)iconH);
+                var rejectRect = new Rectangle((int)startX, (int)buttonsY, (int)rejectTotalW, (int)iconH);
+                var acceptRect = new Rectangle((int)(startX + rejectTotalW + spacing), (int)buttonsY, (int)acceptTotalW, (int)iconH);
 
-            if (rejectRect.Contains(virtualMouse))
-                action = LetterAction.Reject;
-            else if (acceptRect.Contains(virtualMouse))
-                action = LetterAction.Accept;
+                if (rejectRect.Contains(virtualMouse))
+                    action = LetterAction.Reject;
+                else if (acceptRect.Contains(virtualMouse))
+                    action = LetterAction.Accept;
+            }
         }
 
         _prevMouse = mouseState;
@@ -267,7 +272,7 @@ public class LetterUI
         var sb = new StringBuilder(text.Length);
         foreach (char c in text)
         {
-            if (c >= 32 && c <= 126 || c == '\n')
+            if ((c >= 32 && c <= 126) || c == '\n')
                 sb.Append(c);
             else if (c == '\u2014' || c == '\u2013') // em/en dash
                 sb.Append('-');

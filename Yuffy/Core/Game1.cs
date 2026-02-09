@@ -118,6 +118,8 @@ public class Game1 : Game
     private SoundEffect _hurtSound;
     private SoundEffect _explosionSound;
     private string _loadError;
+    private bool _settingsPendingSave;
+    private float _settingsSaveDelay;
 
 #if DEBUG
     private bool _debugMode;
@@ -147,7 +149,8 @@ public class Game1 : Game
             {
                 _settings.WindowWidth = Window.ClientBounds.Width;
                 _settings.WindowHeight = Window.ClientBounds.Height;
-                _settings.Save();
+                _settingsPendingSave = true;
+                _settingsSaveDelay = 0.5f;
             }
         };
         _screenFade = new ScreenFade();
@@ -178,6 +181,12 @@ public class Game1 : Game
         {
             _loadError = $"File not found: {ex.Message}\nPress any key to exit.";
             Window.Title = "Yuffy - Missing File";
+        }
+        catch (Exception ex)
+        {
+            _loadError = $"Failed to load game: {ex.Message}\nPress any key to exit.";
+            Window.Title = "Yuffy - Load Error";
+            System.Diagnostics.Debug.WriteLine($"Unexpected load error: {ex}");
         }
     }
 
@@ -516,19 +525,7 @@ public class Game1 : Game
         _mushroomTexture = Content.Load<Texture2D>("images/tilesets/UI/playercount");
 
         _collectibles = new List<Collectible>();
-        for (int i = 0; i < 25; i++)
-        {
-            for (int attempt = 0; attempt < 100; attempt++)
-            {
-                int col = _rng.Next(3, _tilemap.MapWidth - 3);
-                int row = _rng.Next(3, _tilemap.MapHeight - 3);
-                if (_tilemap.IsTileBlocked(col, row)) continue;
-                int st = _tilemap.ScaledTileSize;
-                var pos = new Vector2(col * st + st / 2f, row * st + st / 2f);
-                _collectibles.Add(new Collectible(_mushroomTexture, pos));
-                break;
-            }
-        }
+        SpawnCollectibles();
 
         var sandTimerTex = Content.Load<Texture2D>("images/tilesets/UI/sandtimer");
         _miniGameUI = new MiniGameUI(_minecraftFont, _mushroomTexture, itemDisc,
@@ -629,6 +626,17 @@ public class Game1 : Game
             _settings.Save();
         }
 
+        // Debounced settings save (for window resize)
+        if (_settingsPendingSave)
+        {
+            _settingsSaveDelay -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (_settingsSaveDelay <= 0)
+            {
+                _settings.Save();
+                _settingsPendingSave = false;
+            }
+        }
+
         if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
             Exit();
 
@@ -648,7 +656,7 @@ public class Game1 : Game
                     MediaPlayer.Volume = _pauseMenuUI.MusicVolume;
                     SoundEffect.MasterVolume = _pauseMenuUI.SfxVolume;
                     MediaPlayer.Play(_backgroundMusic);
-                }, TransitionMode.Wipe);
+                }, TransitionMode.Wipe, _viewport.Height);
             }
             else if (action == MenuAction.Exit)
                 Exit();
@@ -791,20 +799,7 @@ public class Game1 : Game
                 );
 
                 // Reset mushrooms on death
-                _collectibles.Clear();
-                for (int i = 0; i < 25; i++)
-                {
-                    for (int attempt = 0; attempt < 100; attempt++)
-                    {
-                        int col = _rng.Next(3, _tilemap.MapWidth - 3);
-                        int row = _rng.Next(3, _tilemap.MapHeight - 3);
-                        if (_tilemap.IsTileBlocked(col, row)) continue;
-                        int st = _tilemap.ScaledTileSize;
-                        var pos = new Vector2(col * st + st / 2f, row * st + st / 2f);
-                        _collectibles.Add(new Collectible(_mushroomTexture, pos));
-                        break;
-                    }
-                }
+                SpawnCollectibles();
                 _miniGameUI.Collected = 0;
                 _miniGameUI.AllCollected = false;
                 _miniGameUI.Won = false;
@@ -1515,6 +1510,24 @@ public class Game1 : Game
         return new Vector2(scaledTile / 2f, scaledTile / 2f);
     }
 
+    private void SpawnCollectibles(int count = 25)
+    {
+        _collectibles.Clear();
+        for (int i = 0; i < count; i++)
+        {
+            for (int attempt = 0; attempt < 100; attempt++)
+            {
+                int col = _rng.Next(3, _tilemap.MapWidth - 3);
+                int row = _rng.Next(3, _tilemap.MapHeight - 3);
+                if (_tilemap.IsTileBlocked(col, row)) continue;
+                int st = _tilemap.ScaledTileSize;
+                var pos = new Vector2(col * st + st / 2f, row * st + st / 2f);
+                _collectibles.Add(new Collectible(_mushroomTexture, pos));
+                break;
+            }
+        }
+    }
+
     private void ResetGameplay()
     {
         _playerHp = MaxPlayerHp;
@@ -1537,20 +1550,7 @@ public class Game1 : Game
         _goblinsDyingTriggered = false;
 
         // Respawn collectibles
-        _collectibles.Clear();
-        for (int i = 0; i < 25; i++)
-        {
-            for (int attempt = 0; attempt < 100; attempt++)
-            {
-                int col = _rng.Next(3, _tilemap.MapWidth - 3);
-                int row = _rng.Next(3, _tilemap.MapHeight - 3);
-                if (_tilemap.IsTileBlocked(col, row)) continue;
-                int st = _tilemap.ScaledTileSize;
-                var pos = new Vector2(col * st + st / 2f, row * st + st / 2f);
-                _collectibles.Add(new Collectible(_mushroomTexture, pos));
-                break;
-            }
-        }
+        SpawnCollectibles();
 
         _miniGameUI.Collected = 0;
         _miniGameUI.Target = 20;

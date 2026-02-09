@@ -24,7 +24,7 @@ public class ScreenFade
     private int _rowCount;
     private static readonly Random Rng = new();
 
-    public void Start(float duration, Action onMidpoint, TransitionMode mode = TransitionMode.Fade)
+    public void Start(float duration, Action onMidpoint, TransitionMode mode = TransitionMode.Fade, int viewportHeight = 540)
     {
         _duration = duration;
         _halfDuration = duration / 2f;
@@ -36,7 +36,7 @@ public class ScreenFade
 
         if (mode == TransitionMode.Wipe)
         {
-            _rowCount = (540 + RowHeight - 1) / RowHeight;
+            _rowCount = (viewportHeight + RowHeight - 1) / RowHeight;
             _rowJitter = new float[_rowCount];
             for (int i = 0; i < _rowCount; i++)
                 _rowJitter[i] = ((float)Rng.NextDouble() * 2f - 1f) * EdgeJitter;

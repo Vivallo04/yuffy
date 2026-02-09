@@ -17,8 +17,6 @@ public class PauseMenuUI
     private readonly VirtualViewport _viewport;
     private readonly Texture2D _arrowLeft;
     private readonly Texture2D _arrowRight;
-    private readonly Texture2D _controlsIcon;
-    private readonly Texture2D _soundIcon;
 
     public float MusicVolume { get; set; }
     public float SfxVolume { get; set; }
@@ -33,9 +31,8 @@ public class PauseMenuUI
     private const int Padding = 16;
     private const float ArrowScale = 3f;
     private const float VolumeStep = 0.10f;
-    private const int TabPaddingH = 8;
+    private const int TabPaddingH = 10;
     private const int TabPaddingV = 4;
-    private const int TabIconGap = 4;
     private const int TabGap = 6;
     private static readonly Color TextColor = Color.White;
     private static readonly Color DimTextColor = new(200, 200, 200);
@@ -46,13 +43,22 @@ public class PauseMenuUI
     private static readonly string[] InstrKeys =
         { "WASD / Arrows", "Shift", "Tab", "E", "1-7", "Esc", "F11" };
     private static readonly string[] InstrActions =
-        { "Move", "Sprint", "Inventory", "Read Letter", "Toolbar Slot", "Pause", "Fullscreen" };
+        { "Move", "Sprint", "Inventory", "Interact", "Tools", "Pause", "Fullscreen" };
+    private static readonly string[] VolumeLabels = { "Music", "SFX" };
+
+    private readonly Texture2D _controlsIcon;
+    private readonly Texture2D _soundIcon;
 
     public PauseMenuUI(NineSliceBox panelBox, NineSliceBox buttonBox, SpriteFont font,
         Texture2D pixel, VirtualViewport viewport, float musicVolume, float sfxVolume,
         Texture2D arrowLeft, Texture2D arrowRight,
         Texture2D controlsIcon, Texture2D soundIcon)
     {
+        ArgumentNullException.ThrowIfNull(arrowLeft);
+        ArgumentNullException.ThrowIfNull(arrowRight);
+        ArgumentNullException.ThrowIfNull(controlsIcon);
+        ArgumentNullException.ThrowIfNull(soundIcon);
+
         _panelBox = panelBox;
         _buttonBox = buttonBox;
         _font = font;
@@ -65,7 +71,6 @@ public class PauseMenuUI
         _controlsIcon = controlsIcon;
         _soundIcon = soundIcon;
     }
-
     private (Rectangle tab0, Rectangle tab1, float contentY) ComputeTabLayout(float s, int panelX, int panelY, int panelW, int padding)
     {
         float titleScale = 1.4f * s;
@@ -76,15 +81,12 @@ public class PauseMenuUI
         int padV = (int)(TabPaddingV * s);
         int tabGap = (int)(TabGap * s);
 
-        int iconSize = (int)tabTextH;
-        int iconGap = (int)(TabIconGap * s);
-
         float tab0TextW = _font.MeasureString(TabNames[0]).X * tabScale;
         float tab1TextW = _font.MeasureString(TabNames[1]).X * tabScale;
 
-        int tab0W = padH + iconSize + iconGap + (int)tab0TextW + padH;
-        int tab1W = padH + iconSize + iconGap + (int)tab1TextW + padH;
-        int tabH = padV + iconSize + padV;
+        int tab0W = padH + (int)tab0TextW + padH;
+        int tab1W = padH + (int)tab1TextW + padH;
+        int tabH = padV + (int)tabTextH + padV;
 
         int totalW = tab0W + tabGap + tab1W;
         int tabStartX = panelX + (panelW - totalW) / 2;
@@ -211,9 +213,8 @@ public class PauseMenuUI
         spriteBatch.DrawString(_font, "PAUSED", titlePos,
             TextColor, 0f, Vector2.Zero, titleScale, SpriteEffects.None, 0f);
 
-        // Tabs (nine-slice box with icon + text)
+        // Tabs (nine-slice box with text only)
         var (tab0Rect, tab1Rect, contentY) = ComputeTabLayout(s, panelX, panelY, panelW, padding);
-        Texture2D[] tabIcons = { _controlsIcon, _soundIcon };
 
         for (int i = 0; i < 2; i++)
         {
@@ -227,17 +228,8 @@ public class PauseMenuUI
 
             float tabScale = 0.7f * s;
             float tabTextH = _font.MeasureString("A").Y * tabScale;
-            int iconSize = (int)tabTextH;
-            int padH = (int)(TabPaddingH * s);
-            int iconGap = (int)(TabIconGap * s);
-
-            int iconX = tabRect.X + padH;
-            int iconY = tabRect.Y + (tabRect.Height - iconSize) / 2;
-            spriteBatch.Draw(tabIcons[i],
-                new Rectangle(iconX, iconY, iconSize, iconSize),
-                active ? Color.White : new Color(180, 180, 180));
-
-            float textX = iconX + iconSize + iconGap;
+            float tabTextW = _font.MeasureString(TabNames[i]).X * tabScale;
+            float textX = tabRect.X + (tabRect.Width - tabTextW) / 2f;
             float textY = tabRect.Y + (tabRect.Height - tabTextH) / 2f;
             Color textColor = active ? TextColor : DimTextColor;
 
@@ -294,21 +286,19 @@ public class PauseMenuUI
         float lineH = arrowH + 12 * s;
         float gap2 = 8 * s;
 
-        string[] labels = { "Music", "SFX" };
-        float[] volumes = { MusicVolume, SfxVolume };
-
         for (int row = 0; row < 2; row++)
         {
             float rowY = contentY + row * lineH;
-            float labelW = _font.MeasureString(labels[row]).X * volScale;
-            string pctText = $"{(int)Math.Round(volumes[row] * 100)}%";
+            float labelW = _font.MeasureString(VolumeLabels[row]).X * volScale;
+            float volume = row == 0 ? MusicVolume : SfxVolume;
+            string pctText = $"{(int)Math.Round(volume * 100)}%";
             float pctW = _font.MeasureString(pctText).X * volScale;
             float totalW = labelW + gap2 + arrowW + gap2 + pctW + gap2 + arrowW;
             float startX = panelX + (panelW - totalW) / 2f;
 
             // Label
             float labelY = rowY + (arrowH - _font.MeasureString("A").Y * volScale) / 2f;
-            spriteBatch.DrawString(_font, labels[row], new Vector2(startX, labelY),
+            spriteBatch.DrawString(_font, VolumeLabels[row], new Vector2(startX, labelY),
                 TextColor, 0f, Vector2.Zero, volScale, SpriteEffects.None, 0f);
 
             // Left arrow

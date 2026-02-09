@@ -6,11 +6,36 @@ namespace Yuffy.Core;
 
 public class GameSettings
 {
-    public int WindowWidth { get; set; } = 1280;
-    public int WindowHeight { get; set; } = 720;
+    private int _windowWidth = 1280;
+    private int _windowHeight = 720;
+    private float _musicVolume = 0.5f;
+    private float _sfxVolume = 1.0f;
+
+    public int WindowWidth
+    {
+        get => _windowWidth;
+        set => _windowWidth = Math.Max(640, value);
+    }
+
+    public int WindowHeight
+    {
+        get => _windowHeight;
+        set => _windowHeight = Math.Max(480, value);
+    }
+
     public bool Fullscreen { get; set; }
-    public float MusicVolume { get; set; } = 0.5f;
-    public float SfxVolume { get; set; } = 1.0f;
+
+    public float MusicVolume
+    {
+        get => _musicVolume;
+        set => _musicVolume = Math.Clamp(value, 0f, 1f);
+    }
+
+    public float SfxVolume
+    {
+        get => _sfxVolume;
+        set => _sfxVolume = Math.Clamp(value, 0f, 1f);
+    }
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -32,7 +57,7 @@ public class GameSettings
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to load settings: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Failed to load settings: {ex.Message}");
         }
         return new GameSettings();
     }
@@ -42,11 +67,13 @@ public class GameSettings
         try
         {
             string json = JsonSerializer.Serialize(this, JsonOptions);
-            File.WriteAllText(FilePath, json);
+            string tempPath = FilePath + ".tmp";
+            File.WriteAllText(tempPath, json);
+            File.Move(tempPath, FilePath, overwrite: true);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to save settings: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Failed to save settings: {ex.Message}");
         }
     }
 }
