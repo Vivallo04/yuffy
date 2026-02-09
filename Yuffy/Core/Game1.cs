@@ -890,6 +890,36 @@ public class Game1 : Game
         _player.Update(gameTime);
         _hair.Update(gameTime);
 
+        // Letter scroll (must update before gameplay freeze check)
+        var letterMouse = Mouse.GetState();
+        var letterAction = _letterUI.Update((float)gameTime.ElapsedGameTime.TotalSeconds,
+            currentKeyState, letterMouse, GetVirtualMousePosition(letterMouse));
+        if (letterAction == LetterAction.Accept)
+        {
+            _letterUI.IsOpen = false;
+            _heartParticles.Trigger();
+            _explosionSound.Play();
+            _miniGameUI.TriggerWin();
+        }
+        else if (letterAction == LetterAction.Reject)
+        {
+            _letterUI.IsOpen = false;
+            _screenFade.Start(1.5f, () =>
+            {
+                _gameState = GameState.GameOver;
+                MediaPlayer.Stop();
+            });
+        }
+
+        // Freeze gameplay while letter is open
+        if (_letterUI.IsOpen)
+        {
+            _previousKeyboardState = currentKeyState;
+            _previousMouseState = mouseState;
+            base.Update(gameTime);
+            return;
+        }
+
         foreach (var animal in _animals)
             animal.Update(gameTime);
 
@@ -1053,27 +1083,6 @@ public class Game1 : Game
 
         // Indicator bob animation
         _indicatorBob += (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-        // Letter scroll
-        var letterMouse = Mouse.GetState();
-        var letterAction = _letterUI.Update((float)gameTime.ElapsedGameTime.TotalSeconds,
-            currentKeyState, letterMouse, GetVirtualMousePosition(letterMouse));
-        if (letterAction == LetterAction.Accept)
-        {
-            _letterUI.IsOpen = false;
-            _heartParticles.Trigger();
-            _explosionSound.Play();
-            _miniGameUI.TriggerWin();
-        }
-        else if (letterAction == LetterAction.Reject)
-        {
-            _letterUI.IsOpen = false;
-            _screenFade.Start(1.5f, () =>
-            {
-                _gameState = GameState.GameOver;
-                MediaPlayer.Stop();
-            });
-        }
 
         _inSnowBiome = !_tilemap.IsGrassBiomeRow(
             (int)(_playerPosition.Y / _tilemap.ScaledTileSize));
