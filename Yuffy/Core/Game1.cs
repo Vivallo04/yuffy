@@ -101,16 +101,23 @@ public class Game1 : Game
     private bool _letterRead;
     private float _indicatorBob;
 
-    private enum GameState { MainMenu, Playing, Paused }
+    private enum GameState { MainMenu, Playing, Paused, GameOver }
     private GameState _gameState = GameState.MainMenu;
     private MainMenuUI _mainMenuUI;
     private PauseMenuUI _pauseMenuUI;
+    private GameOverUI _gameOverUI;
     private NineSliceBox _buttonBox;
     private MouseState _previousMouseState;
+
+    private HeartParticles _heartParticles;
+    private ScreenFade _screenFade;
+    private GameSettings _settings;
 
     private Song _backgroundMusic;
     private SoundEffect _coinSound;
     private SoundEffect _hurtSound;
+    private SoundEffect _explosionSound;
+    private string _loadError;
 
 #if DEBUG
     private bool _debugMode;
@@ -126,12 +133,24 @@ public class Game1 : Game
         Content.RootDirectory = "Content";
         IsMouseVisible = false;
 
-        _graphics.PreferredBackBufferWidth = 1280;
-        _graphics.PreferredBackBufferHeight = 720;
+        _settings = GameSettings.Load();
+        _graphics.PreferredBackBufferWidth = _settings.WindowWidth;
+        _graphics.PreferredBackBufferHeight = _settings.WindowHeight;
+        _graphics.IsFullScreen = _settings.Fullscreen;
         IsFixedTimeStep = false;
         _graphics.SynchronizeWithVerticalRetrace = true;
         Window.AllowUserResizing = true;
-        Window.ClientSizeChanged += (_, _) => RefreshViewportFromWindow();
+        Window.ClientSizeChanged += (_, _) =>
+        {
+            RefreshViewportFromWindow();
+            if (!_graphics.IsFullScreen)
+            {
+                _settings.WindowWidth = Window.ClientBounds.Width;
+                _settings.WindowHeight = Window.ClientBounds.Height;
+                _settings.Save();
+            }
+        };
+        _screenFade = new ScreenFade();
     }
 
     protected override void Initialize()
@@ -146,6 +165,24 @@ public class Game1 : Game
         _renderTarget = new RenderTarget2D(GraphicsDevice, _viewport.Width, _viewport.Height);
         _camera = new Camera(_viewport);
 
+        try
+        {
+            LoadGameContent();
+        }
+        catch (Microsoft.Xna.Framework.Content.ContentLoadException ex)
+        {
+            _loadError = $"Missing game file: {ex.Message}\nPress any key to exit.";
+            Window.Title = "Yuffy - Missing Content";
+        }
+        catch (System.IO.FileNotFoundException ex)
+        {
+            _loadError = $"File not found: {ex.Message}\nPress any key to exit.";
+            Window.Title = "Yuffy - Missing File";
+        }
+    }
+
+    private void LoadGameContent()
+    {
         Texture2D idleTexture = Content.Load<Texture2D>("images/tilesets/Characters/Human/IDLE/base_idle_strip9");
         Texture2D walkTexture = Content.Load<Texture2D>("images/tilesets/Characters/Human/WALKING/base_walk_strip8");
 
@@ -453,7 +490,9 @@ public class Game1 : Game
         _snowParticles = new SnowParticles(_pixelTexture, _viewport);
 
         _indicatorTexture = Content.Load<Texture2D>("images/tilesets/UI/indicator");
-        _letterUI = new LetterUI(nineSliceBox, _minecraftFont, _pixelTexture, _viewport);
+        var confirmTex = Content.Load<Texture2D>("images/tilesets/UI/confirm");
+        var cancelTex = Content.Load<Texture2D>("images/tilesets/UI/cancel");
+        _letterUI = new LetterUI(nineSliceBox, _minecraftFont, _pixelTexture, _viewport, confirmTex, cancelTex);
         string letterPath = System.IO.Path.Combine(Content.RootDirectory, "letter.txt");
         try
         {
@@ -462,17 +501,17 @@ public class Game1 : Game
         catch (System.IO.FileNotFoundException ex)
         {
             _letterUI.Text = "Letter content not found.";
-            Console.WriteLine($"Letter file not found: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Letter file not found: {ex.Message}");
         }
         catch (UnauthorizedAccessException ex)
         {
             _letterUI.Text = "Unable to access letter file due to permissions.";
-            Console.WriteLine($"Unauthorized access to letter file: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Unauthorized access to letter file: {ex.Message}");
         }
         catch (System.IO.IOException ex)
         {
             _letterUI.Text = "Error reading letter file.";
-            Console.WriteLine($"I/O error reading letter file: {ex.Message}\n{ex.StackTrace}");
+            System.Diagnostics.Debug.WriteLine($"I/O error reading letter file: {ex.Message}\n{ex.StackTrace}");
         }
         _mushroomTexture = Content.Load<Texture2D>("images/tilesets/UI/playercount");
 
@@ -509,12 +548,42 @@ public class Game1 : Game
             Content.Load<Texture2D>("images/tilesets/UI/9slice_box_white/lt_box_9slice_br"),
             4);
 
-        _mainMenuUI = new MainMenuUI(nineSliceBox, _buttonBox, _minecraftFont, _pixelTexture, _viewport);
-        _pauseMenuUI = new PauseMenuUI(nineSliceBox, _buttonBox, _minecraftFont, _pixelTexture, _viewport);
+        _mainMenuUI = new MainMenuUI(nineSliceBox, _buttonBox, _minecraftFont, _pixelTexture, _viewport, _heartTexture);
+        var arrowLeftTex = Content.Load<Texture2D>("images/tilesets/UI/arrow_left");
+        var arrowRightTex = Content.Load<Texture2D>("images/tilesets/UI/arrow_right");
+        var controlsTabIcon = Content.Load<Texture2D>("images/tilesets/UI/hand_open_02");
+        var soundTabIcon = Content.Load<Texture2D>("images/tilesets/UI/expression_chat");
+        _pauseMenuUI = new PauseMenuUI(nineSliceBox, _buttonBox, _minecraftFont, _pixelTexture, _viewport, _settings.MusicVolume, _settings.SfxVolume, arrowLeftTex, arrowRightTex, controlsTabIcon, soundTabIcon);
+        _gameOverUI = new GameOverUI(nineSliceBox, _buttonBox, _minecraftFont, _pixelTexture, _viewport);
+
+        _heartParticles = new HeartParticles(_heartTexture, _viewport);
 
         _backgroundMusic = Content.Load<Song>("music/time_for_adventure");
         _coinSound = Content.Load<SoundEffect>("music/coin");
         _hurtSound = Content.Load<SoundEffect>("music/hurt");
+        _explosionSound = Content.Load<SoundEffect>("music/explosion");
+    }
+
+    private void DrawLoadError()
+    {
+        GraphicsDevice.Clear(Color.Black);
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+        if (_minecraftFont != null)
+        {
+            float scale = 0.8f;
+            var lines = _loadError.Split('\n');
+            float lineH = _minecraftFont.MeasureString("A").Y * scale + 4;
+            float startY = (_viewport.Height - lines.Length * lineH) / 2f;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var size = _minecraftFont.MeasureString(lines[i]) * scale;
+                float x = (_viewport.Width - size.X) / 2f;
+                float y = startY + i * lineH;
+                _spriteBatch.DrawString(_minecraftFont, lines[i], new Vector2(x, y),
+                    Color.White, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+            }
+        }
+        _spriteBatch.End();
     }
 
     private Vector2 GetVirtualMousePosition(MouseState mouseState)
@@ -536,23 +605,50 @@ public class Game1 : Game
 
     protected override void Update(GameTime gameTime)
     {
+        if (_loadError != null)
+        {
+            if (Keyboard.GetState().GetPressedKeyCount() > 0)
+                Exit();
+            base.Update(gameTime);
+            return;
+        }
+
         KeyboardState currentKeyState = Keyboard.GetState();
         var mouseState = Mouse.GetState();
         var virtualMouse = GetVirtualMousePosition(mouseState);
 
+        // Fullscreen toggle (works from any screen)
+        bool f11 = currentKeyState.IsKeyDown(Keys.F11) && !_previousKeyboardState.IsKeyDown(Keys.F11);
+        bool altEnter = currentKeyState.IsKeyDown(Keys.Enter) && currentKeyState.IsKeyDown(Keys.LeftAlt)
+            && !_previousKeyboardState.IsKeyDown(Keys.Enter);
+        if (f11 || altEnter)
+        {
+            _graphics.IsFullScreen = !_graphics.IsFullScreen;
+            _graphics.ApplyChanges();
+            _settings.Fullscreen = _graphics.IsFullScreen;
+            _settings.Save();
+        }
+
         if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
             Exit();
+
+        _screenFade.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
 
         // Main menu state
         if (_gameState == GameState.MainMenu)
         {
             var action = _mainMenuUI.Update(virtualMouse, mouseState, _previousMouseState);
-            if (action == MenuAction.Play)
+            if (action == MenuAction.Play && !_screenFade.IsActive)
             {
-                _gameState = GameState.Playing;
-                MediaPlayer.IsRepeating = true;
-                MediaPlayer.Volume = 0.5f;
-                MediaPlayer.Play(_backgroundMusic);
+                _screenFade.Start(1.1f, () =>
+                {
+                    ResetGameplay();
+                    _gameState = GameState.Playing;
+                    MediaPlayer.IsRepeating = true;
+                    MediaPlayer.Volume = _pauseMenuUI.MusicVolume;
+                    SoundEffect.MasterVolume = _pauseMenuUI.SfxVolume;
+                    MediaPlayer.Play(_backgroundMusic);
+                }, TransitionMode.Wipe);
             }
             else if (action == MenuAction.Exit)
                 Exit();
@@ -574,6 +670,15 @@ public class Game1 : Game
             else
             {
                 var action = _pauseMenuUI.Update(virtualMouse, mouseState, _previousMouseState);
+                MediaPlayer.Volume = _pauseMenuUI.MusicVolume;
+                SoundEffect.MasterVolume = _pauseMenuUI.SfxVolume;
+                if (_settings.MusicVolume != _pauseMenuUI.MusicVolume ||
+                    _settings.SfxVolume != _pauseMenuUI.SfxVolume)
+                {
+                    _settings.MusicVolume = _pauseMenuUI.MusicVolume;
+                    _settings.SfxVolume = _pauseMenuUI.SfxVolume;
+                    _settings.Save();
+                }
                 if (action == PauseAction.Resume)
                 {
                     _gameState = GameState.Playing;
@@ -581,9 +686,31 @@ public class Game1 : Game
                 }
                 else if (action == PauseAction.ExitToMenu)
                 {
-                    _gameState = GameState.MainMenu;
-                    MediaPlayer.Stop();
+                    _screenFade.Start(1.0f, () =>
+                    {
+                        CleanupGameplay();
+                        _gameState = GameState.MainMenu;
+                    });
                 }
+            }
+
+            _previousKeyboardState = currentKeyState;
+            _previousMouseState = mouseState;
+            base.Update(gameTime);
+            return;
+        }
+
+        // Game over state
+        if (_gameState == GameState.GameOver)
+        {
+            var goAction = _gameOverUI.Update(virtualMouse, mouseState, _previousMouseState);
+            if (goAction == GameOverAction.BackToMenu && !_screenFade.IsActive)
+            {
+                _screenFade.Start(1.0f, () =>
+                {
+                    CleanupGameplay();
+                    _gameState = GameState.MainMenu;
+                });
             }
 
             _previousKeyboardState = currentKeyState;
@@ -645,6 +772,8 @@ public class Game1 : Game
                 _debugTimeScale = 1.0f;
             if (currentKeyState.IsKeyDown(Keys.F9) && !_previousKeyboardState.IsKeyDown(Keys.F9))
                 _debugTimeScale = 5.0f;
+            if (currentKeyState.IsKeyDown(Keys.F10) && !_previousKeyboardState.IsKeyDown(Keys.F10))
+                foreach (var c in _collectibles) c.Collected = true;
         }
 #endif
 
@@ -660,6 +789,28 @@ public class Game1 : Game
                     _tilemap.MapWidth / 2,
                     (int)(_tilemap.MapHeight * 0.75f)
                 );
+
+                // Reset mushrooms on death
+                _collectibles.Clear();
+                for (int i = 0; i < 25; i++)
+                {
+                    for (int attempt = 0; attempt < 100; attempt++)
+                    {
+                        int col = _rng.Next(3, _tilemap.MapWidth - 3);
+                        int row = _rng.Next(3, _tilemap.MapHeight - 3);
+                        if (_tilemap.IsTileBlocked(col, row)) continue;
+                        int st = _tilemap.ScaledTileSize;
+                        var pos = new Vector2(col * st + st / 2f, row * st + st / 2f);
+                        _collectibles.Add(new Collectible(_mushroomTexture, pos));
+                        break;
+                    }
+                }
+                _miniGameUI.Collected = 0;
+                _miniGameUI.AllCollected = false;
+                _miniGameUI.Won = false;
+                _letterPlaced = false;
+                _letterRead = false;
+
                 if (_deathFromTimer)
                 {
                     _deathFromTimer = false;
@@ -882,8 +1033,8 @@ public class Game1 : Game
         if (collected > prevCollected)
             _coinSound.Play();
         _miniGameUI.Collected = collected;
-        if (collected >= _miniGameUI.Target && !_miniGameUI.Won)
-            _miniGameUI.TriggerWin();
+        if (collected >= _miniGameUI.Target && !_miniGameUI.AllCollected)
+            _miniGameUI.TriggerAllCollected();
         _miniGameUI.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
 
         // Timer ran out — kill the player
@@ -894,7 +1045,7 @@ public class Game1 : Game
         }
 
         // Place letter in toolbar when all mushrooms collected
-        if (_miniGameUI.Won && !_letterPlaced)
+        if (_miniGameUI.AllCollected && !_letterPlaced)
         {
             _inventory.SetSlot(0, 0, ItemType.Letter, 1);
             _letterPlaced = true;
@@ -904,12 +1055,31 @@ public class Game1 : Game
         _indicatorBob += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
         // Letter scroll
-        _letterUI.Update((float)gameTime.ElapsedGameTime.TotalSeconds, currentKeyState, Mouse.GetState());
+        var letterMouse = Mouse.GetState();
+        var letterAction = _letterUI.Update((float)gameTime.ElapsedGameTime.TotalSeconds,
+            currentKeyState, letterMouse, GetVirtualMousePosition(letterMouse));
+        if (letterAction == LetterAction.Accept)
+        {
+            _letterUI.IsOpen = false;
+            _heartParticles.Trigger();
+            _explosionSound.Play();
+            _miniGameUI.TriggerWin();
+        }
+        else if (letterAction == LetterAction.Reject)
+        {
+            _letterUI.IsOpen = false;
+            _screenFade.Start(1.5f, () =>
+            {
+                _gameState = GameState.GameOver;
+                MediaPlayer.Stop();
+            });
+        }
 
         _inSnowBiome = !_tilemap.IsGrassBiomeRow(
             (int)(_playerPosition.Y / _tilemap.ScaledTileSize));
         if (_inSnowBiome)
             _snowParticles.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
+        _heartParticles.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
 
         // Number keys 1-7 select toolbar slot
         for (int i = 0; i < 7; i++)
@@ -941,6 +1111,19 @@ public class Game1 : Game
 
     protected override void Draw(GameTime gameTime)
     {
+        if (_loadError != null)
+        {
+            GraphicsDevice.SetRenderTarget(_renderTarget);
+            DrawLoadError();
+            GraphicsDevice.SetRenderTarget(null);
+            GraphicsDevice.Clear(Color.Black);
+            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            _spriteBatch.Draw(_renderTarget, _destinationRect, Color.White);
+            _spriteBatch.End();
+            base.Draw(gameTime);
+            return;
+        }
+
         // Pass 1: render to virtual-resolution render target
         GraphicsDevice.SetRenderTarget(_renderTarget);
         GraphicsDevice.Clear(Color.Black);
@@ -1153,6 +1336,14 @@ public class Game1 : Game
         _miniGameUI.Draw(_spriteBatch);
         _spriteBatch.End();
 
+        // Heart fountain particles (screen space)
+        if (_heartParticles.IsActive)
+        {
+            _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+            _heartParticles.Draw(_spriteBatch);
+            _spriteBatch.End();
+        }
+
 #if DEBUG
         if (_debugMode)
         {
@@ -1172,7 +1363,7 @@ public class Game1 : Game
                 $"Speed: {_debugTimeScale:F2}x",
                 $"Skeletons: {_skeletons.Count}  Goblins: {_goblins.Count}",
                 $"HP: {_playerHp}/{MaxPlayerHp}  Mushrooms: {_collectibles.Count}/{_miniGameUI.Target}",
-                "F5:Night F6:Dawn F7:Slow F8:1x F9:Fast",
+                "F5:Night F6:Dawn F7:Slow F8:1x F9:Fast F10:Win",
             };
 
             float maxW = 0;
@@ -1229,6 +1420,23 @@ public class Game1 : Game
             var virtualMouse = GetVirtualMousePosition(Mouse.GetState());
             _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
             _pauseMenuUI.Draw(_spriteBatch, virtualMouse);
+            _spriteBatch.End();
+        }
+
+        // Game over overlay
+        if (_gameState == GameState.GameOver)
+        {
+            var virtualMouse = GetVirtualMousePosition(Mouse.GetState());
+            _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+            _gameOverUI.Draw(_spriteBatch, virtualMouse);
+            _spriteBatch.End();
+        }
+
+        // Screen fade overlay (always on top of everything)
+        if (_screenFade.IsActive)
+        {
+            _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+            _screenFade.Draw(_spriteBatch, _pixelTexture, _viewport.Width, _viewport.Height);
             _spriteBatch.End();
         }
 
@@ -1305,6 +1513,74 @@ public class Game1 : Game
         }
 
         return new Vector2(scaledTile / 2f, scaledTile / 2f);
+    }
+
+    private void ResetGameplay()
+    {
+        _playerHp = MaxPlayerHp;
+        _playerPosition = FindSafeSpawnPosition(
+            _tilemap.MapWidth / 2,
+            (int)(_tilemap.MapHeight * 0.75f));
+        _playerReactionTimer = 0;
+        _deathFadeTimer = 0;
+        _deathFromTimer = false;
+        _playerDamageCooldown = 0;
+        _player.Animation = _idleAnimation;
+        _hair.Animation = _hairIdleAnimation;
+
+        _timeOfDay = 0.35f;
+        _skeletons.Clear();
+        _goblins.Clear();
+        _skeletonsSpawnedThisNight = false;
+        _skeletonsDyingTriggered = false;
+        _goblinsSpawnedThisNight = false;
+        _goblinsDyingTriggered = false;
+
+        // Respawn collectibles
+        _collectibles.Clear();
+        for (int i = 0; i < 25; i++)
+        {
+            for (int attempt = 0; attempt < 100; attempt++)
+            {
+                int col = _rng.Next(3, _tilemap.MapWidth - 3);
+                int row = _rng.Next(3, _tilemap.MapHeight - 3);
+                if (_tilemap.IsTileBlocked(col, row)) continue;
+                int st = _tilemap.ScaledTileSize;
+                var pos = new Vector2(col * st + st / 2f, row * st + st / 2f);
+                _collectibles.Add(new Collectible(_mushroomTexture, pos));
+                break;
+            }
+        }
+
+        _miniGameUI.Collected = 0;
+        _miniGameUI.Target = 20;
+        _miniGameUI.TimeRemaining = 180f;
+        _miniGameUI.IsActive = true;
+        _miniGameUI.AllCollected = false;
+        _miniGameUI.Won = false;
+        _miniGameUI.Lost = false;
+
+        _letterPlaced = false;
+        _letterRead = false;
+        _letterUI.IsOpen = false;
+        _inventoryOpen = false;
+        _indicatorBob = 0;
+        _toolbarUI.SelectedSlot = 0;
+
+        // Clear inventory
+        for (int x = 0; x < Inventory.Columns; x++)
+            for (int y = 0; y < Inventory.Rows; y++)
+                _inventory.SetSlot(x, y, ItemType.None, 0);
+    }
+
+    private void CleanupGameplay()
+    {
+        _skeletons.Clear();
+        _goblins.Clear();
+        _collectibles.Clear();
+        _letterUI.IsOpen = false;
+        _inventoryOpen = false;
+        MediaPlayer.Stop();
     }
 
     private bool IsTileBlockedAt(float x, float y)

@@ -20,6 +20,7 @@ public class MiniGameUI
     public int Target { get; set; } = 20;
     public float TimeRemaining { get; set; } = 180f;
     public bool IsActive { get; set; }
+    public bool AllCollected { get; set; }
     public bool Won { get; set; }
     public bool Lost { get; set; }
 
@@ -58,7 +59,7 @@ public class MiniGameUI
     {
         if (!IsActive) return;
 
-        if (Won || Lost)
+        if (AllCollected || Won || Lost)
         {
             if (_resultTextTimer > 0)
                 _resultTextTimer -= deltaTime;
@@ -72,6 +73,13 @@ public class MiniGameUI
             Lost = true;
             _resultTextTimer = 5f;
         }
+    }
+
+    public void TriggerAllCollected()
+    {
+        if (!IsActive || Lost || AllCollected) return;
+        AllCollected = true;
+        _resultTextTimer = 5f;
     }
 
     public void TriggerWin()
@@ -91,13 +99,15 @@ public class MiniGameUI
         // Mushroom count label (disc + 3-slice bar + text)
         DrawCountLabel(spriteBatch);
 
-        // Win/lose message centered (auto-hides after 5s)
+        // Win/lose/prompt message centered (auto-hides after 5s)
         if (_resultTextTimer > 0)
         {
             if (Won)
                 DrawCentered(spriteBatch, "YOU WIN!", TextColor);
             else if (Lost)
                 DrawCentered(spriteBatch, "TIME'S UP!", TextColor);
+            else if (AllCollected)
+                DrawCentered(spriteBatch, "Open the letter!", TextColor);
         }
     }
 

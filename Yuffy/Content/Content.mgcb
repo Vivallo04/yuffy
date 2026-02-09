@@ -338,10 +338,25 @@
 /processor:TextureProcessor
 /build:images/tilesets/UI/expression_chat.png
 
+#begin images/tilesets/UI/hand_open_02.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/hand_open_02.png
+
 #begin images/tilesets/UI/indicator.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /build:images/tilesets/UI/indicator.png
+
+#begin images/tilesets/UI/confirm.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/confirm.png
+
+#begin images/tilesets/UI/cancel.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/cancel.png
 
 #begin fonts/Minecraft.spritefont
 /importer:FontDescriptionImporter
@@ -365,4 +380,20 @@
 /processor:SongProcessor
 /processorParam:Quality=Best
 /build:music/time_for_adventure.mp3
+
+#begin music/explosion.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:music/explosion.wav
+
+#begin images/tilesets/UI/arrow_left.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/arrow_left.png
+
+#begin images/tilesets/UI/arrow_right.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/build:images/tilesets/UI/arrow_right.png
 

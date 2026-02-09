@@ -14,6 +14,7 @@ public class MainMenuUI
     private readonly SpriteFont _font;
     private readonly Texture2D _pixel;
     private readonly VirtualViewport _viewport;
+    private readonly Texture2D _heartTex;
 
     private const int ButtonWidth = 180;
     private const int ButtonHeight = 44;
@@ -24,13 +25,14 @@ public class MainMenuUI
     private static readonly Color ShadowColor = new(10, 10, 20);
 
     public MainMenuUI(NineSliceBox panelBox, NineSliceBox buttonBox, SpriteFont font,
-        Texture2D pixel, VirtualViewport viewport)
+        Texture2D pixel, VirtualViewport viewport, Texture2D heartTex)
     {
         _panelBox = panelBox;
         _buttonBox = buttonBox;
         _font = font;
         _pixel = pixel;
         _viewport = viewport;
+        _heartTex = heartTex;
     }
 
     public MenuAction Update(Vector2 virtualMouse, MouseState mouse, MouseState prevMouse)
@@ -90,6 +92,34 @@ public class MainMenuUI
 
         DrawButton(spriteBatch, playRect, "PLAY", virtualMouse, s);
         DrawButton(spriteBatch, exitRect, "EXIT", virtualMouse, s);
+
+        // "Made with [heart] by Andy" credit
+        float creditScale = 0.5f * s;
+        var madeWith = "Made with ";
+        var byAndy = " by Andy for Yuyu";
+        float madeW = _font.MeasureString(madeWith).X * creditScale;
+        float byW = _font.MeasureString(byAndy).X * creditScale;
+        float textH = _font.MeasureString("A").Y * creditScale;
+        float heartSize = textH;
+        float totalW = madeW + heartSize + byW;
+
+        float creditX = (_viewport.Width - totalW) / 2f;
+        float creditY = _viewport.Height - 30 * s;
+
+        spriteBatch.DrawString(_font, madeWith, new Vector2(creditX + 1, creditY + 1),
+            ShadowColor, 0f, Vector2.Zero, creditScale, SpriteEffects.None, 0f);
+        spriteBatch.DrawString(_font, madeWith, new Vector2(creditX, creditY),
+            TextColor, 0f, Vector2.Zero, creditScale, SpriteEffects.None, 0f);
+
+        spriteBatch.Draw(_heartTex,
+            new Rectangle((int)(creditX + madeW), (int)creditY, (int)heartSize, (int)heartSize),
+            Color.White);
+
+        float byX = creditX + madeW + heartSize;
+        spriteBatch.DrawString(_font, byAndy, new Vector2(byX + 1, creditY + 1),
+            ShadowColor, 0f, Vector2.Zero, creditScale, SpriteEffects.None, 0f);
+        spriteBatch.DrawString(_font, byAndy, new Vector2(byX, creditY),
+            TextColor, 0f, Vector2.Zero, creditScale, SpriteEffects.None, 0f);
     }
 
     private void DrawButton(SpriteBatch spriteBatch, Rectangle rect, string text,
@@ -106,7 +136,7 @@ public class MainMenuUI
         var textSize = _font.MeasureString(text) * fontScale;
         var textPos = new Vector2(
             rect.X + (rect.Width - textSize.X) / 2f,
-            rect.Y + (rect.Height - textSize.Y) / 2f + 3 * scale);
+            rect.Y + (rect.Height - textSize.Y) / 2f + 6 * scale);
 
         // Shadow
         spriteBatch.DrawString(_font, text, textPos + new Vector2(1, 1),
