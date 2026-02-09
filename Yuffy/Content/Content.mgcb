@@ -13,6 +13,9 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin letter.txt
+/copy:letter.txt
+
 #begin images/tilesets/Characters/Human/IDLE/base_idle_strip9.png
 /importer:TextureImporter
 /processor:TextureProcessor
