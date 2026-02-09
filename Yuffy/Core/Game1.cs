@@ -503,25 +503,16 @@ public class Game1 : Game
         var confirmTex = Content.Load<Texture2D>("images/tilesets/UI/confirm");
         var cancelTex = Content.Load<Texture2D>("images/tilesets/UI/cancel");
         _letterUI = new LetterUI(nineSliceBox, _minecraftFont, _pixelTexture, _viewport, confirmTex, cancelTex);
-        string letterPath = System.IO.Path.Combine(Content.RootDirectory, "letter.txt");
         try
         {
-            _letterUI.Text = System.IO.File.ReadAllText(letterPath);
+            using var stream = TitleContainer.OpenStream(System.IO.Path.Combine(Content.RootDirectory, "letter.txt"));
+            using var reader = new System.IO.StreamReader(stream);
+            _letterUI.Text = reader.ReadToEnd();
         }
-        catch (System.IO.FileNotFoundException ex)
+        catch (Exception ex)
         {
             _letterUI.Text = "Letter content not found.";
-            System.Diagnostics.Debug.WriteLine($"Letter file not found: {ex.Message}");
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            _letterUI.Text = "Unable to access letter file due to permissions.";
-            System.Diagnostics.Debug.WriteLine($"Unauthorized access to letter file: {ex.Message}");
-        }
-        catch (System.IO.IOException ex)
-        {
-            _letterUI.Text = "Error reading letter file.";
-            System.Diagnostics.Debug.WriteLine($"I/O error reading letter file: {ex.Message}\n{ex.StackTrace}");
+            System.Diagnostics.Debug.WriteLine($"Letter file error: {ex.Message}");
         }
         _mushroomTexture = Content.Load<Texture2D>("images/tilesets/UI/playercount");
 
