@@ -17,6 +17,16 @@ public class NineSliceBox
         Texture2D bl, Texture2D bc, Texture2D br,
         int scale)
     {
+        ArgumentNullException.ThrowIfNull(tl);
+        ArgumentNullException.ThrowIfNull(tc);
+        ArgumentNullException.ThrowIfNull(tr);
+        ArgumentNullException.ThrowIfNull(lc);
+        ArgumentNullException.ThrowIfNull(c);
+        ArgumentNullException.ThrowIfNull(rc);
+        ArgumentNullException.ThrowIfNull(bl);
+        ArgumentNullException.ThrowIfNull(bc);
+        ArgumentNullException.ThrowIfNull(br);
+
         _tl = tl; _tc = tc; _tr = tr;
         _lc = lc; _c = c;   _rc = rc;
         _bl = bl; _bc = bc; _br = br;

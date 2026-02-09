@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -18,6 +19,7 @@ public class Collectible
 
     public Collectible(Texture2D texture, Vector2 position)
     {
+        ArgumentNullException.ThrowIfNull(texture);
         _texture = texture;
         Position = position;
     }

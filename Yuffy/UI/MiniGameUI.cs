@@ -35,6 +35,15 @@ public class MiniGameUI
         Texture2D labelLeft, Texture2D labelMiddle, Texture2D labelRight,
         Texture2D sandTimerIcon, VirtualViewport viewport)
     {
+        ArgumentNullException.ThrowIfNull(font);
+        ArgumentNullException.ThrowIfNull(icon);
+        ArgumentNullException.ThrowIfNull(disc);
+        ArgumentNullException.ThrowIfNull(labelLeft);
+        ArgumentNullException.ThrowIfNull(labelMiddle);
+        ArgumentNullException.ThrowIfNull(labelRight);
+        ArgumentNullException.ThrowIfNull(sandTimerIcon);
+        ArgumentNullException.ThrowIfNull(viewport);
+
         _font = font;
         _icon = icon;
         _disc = disc;
@@ -67,6 +76,7 @@ public class MiniGameUI
 
     public void TriggerWin()
     {
+        if (!IsActive || Lost) return;
         Won = true;
         _resultTextTimer = 5f;
     }
@@ -96,105 +106,72 @@ public class MiniGameUI
         int minutes = (int)TimeRemaining / 60;
         int seconds = (int)TimeRemaining % 60;
         string timerText = $"{minutes}:{seconds:D2}";
-        Vector2 textSize = _font.MeasureString(timerText) * FontScale;
 
+        var textSize = _font.MeasureString(timerText) * FontScale;
         int capW = _labelLeft.Width * Scale;
-        int barH = _labelLeft.Height * Scale;
-        int textPad = 8;
-        int barInnerW = (int)textSize.X + textPad * 2;
+        int barInnerW = (int)textSize.X + TextPad * 2;
         int barTotalW = capW * 2 + barInnerW;
 
-        int discW = _disc.Width * Scale;
-        int discH = _disc.Height * Scale;
-        int discOverlap = discW / 2;
+        int barX = _viewport.Width - 10 - barTotalW;
+        int barY = 8;
 
-        int topMargin = 8;
-
-        // Position: bar anchored top-right
-        int rightMargin = 10;
-        int barX = _viewport.Width - rightMargin - barTotalW;
-        int barY = topMargin;
-
-        // Disc overlaps left edge of bar
-        int discX = barX - discW + discOverlap;
-        int discY = barY + (barH - discH) / 2;
-
-        // Draw 3-slice label bar
-        spriteBatch.Draw(_labelLeft, new Rectangle(barX, barY, capW, barH), Color.White);
-        spriteBatch.Draw(_labelMiddle, new Rectangle(barX + capW, barY, barInnerW, barH), Color.White);
-        spriteBatch.Draw(_labelRight, new Rectangle(barX + capW + barInnerW, barY, capW, barH), Color.White);
-
-        // Draw text centered in visible bar area (right of disc overlap)
-        int visibleLeft = barX + discOverlap;
-        int visibleRight = barX + barTotalW;
-        float textX = visibleLeft + (visibleRight - visibleLeft - textSize.X) / 2f;
-        float textY = barY + (barH - textSize.Y) / 2f + 5;
-
-        // Shadow
-        spriteBatch.DrawString(_font, timerText, new Vector2(textX + 1, textY + 1), TimerShadowColor,
-            0f, Vector2.Zero, FontScale, SpriteEffects.None, 0f);
-        // Main text
-        spriteBatch.DrawString(_font, timerText, new Vector2(textX, textY), TimerTextColor,
-            0f, Vector2.Zero, FontScale, SpriteEffects.None, 0f);
-
-        // Draw disc (in front of bar)
-        spriteBatch.Draw(_disc, new Rectangle(discX, discY, discW, discH), Color.White);
-
-        // Draw sandtimer icon centered on disc
-        int iconScale = 3;
-        int iconW = _sandTimerIcon.Width * iconScale;
-        int iconH = _sandTimerIcon.Height * iconScale;
-        int iconX = discX + (discW - iconW) / 2;
-        int iconY = discY + (discH - iconH) / 2;
-        spriteBatch.Draw(_sandTimerIcon, new Rectangle(iconX, iconY, iconW, iconH), Color.White);
+        DrawLabelBar(spriteBatch, timerText, _sandTimerIcon, barX, barY, drawShadow: true);
     }
 
     private void DrawCountLabel(SpriteBatch spriteBatch)
     {
-        string countText = $"{Collected}/{Target}";
-        Vector2 textSize = _font.MeasureString(countText) * FontScale;
+        int discW = _disc.Width * Scale;
+        int discOverlap = discW / 2;
 
+        int barX = 10 + discW - discOverlap;
+        int barY = 64;
+
+        DrawLabelBar(spriteBatch, $"{Collected}/{Target}", _icon, barX, barY);
+    }
+
+    private const int TextPad = 8;
+    private const int IconScale = 3;
+
+    private void DrawLabelBar(SpriteBatch spriteBatch, string text, Texture2D icon,
+        int barX, int barY, bool drawShadow = false)
+    {
+        var textSize = _font.MeasureString(text) * FontScale;
         int capW = _labelLeft.Width * Scale;
         int barH = _labelLeft.Height * Scale;
-        int textPad = 8;
-        int barInnerW = (int)textSize.X + textPad * 2;
+        int barInnerW = (int)textSize.X + TextPad * 2;
         int barTotalW = capW * 2 + barInnerW;
 
         int discW = _disc.Width * Scale;
         int discH = _disc.Height * Scale;
         int discOverlap = discW / 2;
 
-        // Position: below hearts (top-left)
-        int barX = 10 + discW - discOverlap;
-        int barY = 64;
-
-        // Disc overlaps left edge of bar, centered vertically on bar
         int discX = barX - discW + discOverlap;
         int discY = barY + (barH - discH) / 2;
 
-        // Draw 3-slice label bar (behind disc)
+        // 3-slice bar
         spriteBatch.Draw(_labelLeft, new Rectangle(barX, barY, capW, barH), Color.White);
         spriteBatch.Draw(_labelMiddle, new Rectangle(barX + capW, barY, barInnerW, barH), Color.White);
         spriteBatch.Draw(_labelRight, new Rectangle(barX + capW + barInnerW, barY, capW, barH), Color.White);
 
-        // Draw text centered in visible bar area (right of disc overlap)
+        // Text centered in visible area (right of disc overlap)
         int visibleLeft = barX + discOverlap;
         int visibleRight = barX + barTotalW;
         float textX = visibleLeft + (visibleRight - visibleLeft - textSize.X) / 2f;
         float textY = barY + (barH - textSize.Y) / 2f + 5;
-        spriteBatch.DrawString(_font, countText, new Vector2(textX, textY), TextColor,
+
+        if (drawShadow)
+            spriteBatch.DrawString(_font, text, new Vector2(textX + 1, textY + 1), TimerShadowColor,
+                0f, Vector2.Zero, FontScale, SpriteEffects.None, 0f);
+        spriteBatch.DrawString(_font, text, new Vector2(textX, textY), TextColor,
             0f, Vector2.Zero, FontScale, SpriteEffects.None, 0f);
 
-        // Draw disc (in front of bar)
+        // Disc and icon
         spriteBatch.Draw(_disc, new Rectangle(discX, discY, discW, discH), Color.White);
-
-        // Draw mushroom icon centered on disc (smaller than disc)
-        int iconScale = 3;
-        int iconW = _icon.Width * iconScale;
-        int iconH = _icon.Height * iconScale;
+        int iconW = icon.Width * IconScale;
+        int iconH = icon.Height * IconScale;
         int iconX = discX + (discW - iconW) / 2;
         int iconY = discY + (discH - iconH) / 2;
-        spriteBatch.Draw(_icon, new Rectangle(iconX, iconY, iconW, iconH), Color.White);
+        spriteBatch.Draw(icon, new Rectangle(iconX, iconY, iconW, iconH), Color.White);
     }
 
     private void DrawCentered(SpriteBatch spriteBatch, string text, Color color)

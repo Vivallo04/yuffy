@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -14,7 +15,12 @@ public class ToolbarUI
     private readonly SpriteFont _font;
     private readonly VirtualViewport _viewport;
 
-    public int SelectedSlot { get; set; }
+    private int _selectedSlot;
+    public int SelectedSlot
+    {
+        get => _selectedSlot;
+        set => _selectedSlot = Math.Clamp(value, 0, SlotCount - 1);
+    }
 
     private const int SlotCount = 7;
     private const int SlotSize = 43;
@@ -33,6 +39,12 @@ public class ToolbarUI
     public ToolbarUI(Texture2D pixel, Dictionary<ItemType, Texture2D> itemTextures, Inventory inventory,
         SpriteFont font, VirtualViewport viewport)
     {
+        ArgumentNullException.ThrowIfNull(pixel);
+        ArgumentNullException.ThrowIfNull(itemTextures);
+        ArgumentNullException.ThrowIfNull(inventory);
+        ArgumentNullException.ThrowIfNull(font);
+        ArgumentNullException.ThrowIfNull(viewport);
+
         _pixel = pixel;
         _itemTextures = itemTextures;
         _inventory = inventory;
@@ -45,6 +57,8 @@ public class ToolbarUI
 
     public int GetSlotCenterX(int slot)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(slot);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(slot, SlotCount);
         return SlotsStartX + slot * (SlotSize + SlotGap) + SlotSize / 2;
     }
 

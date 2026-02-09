@@ -34,6 +34,9 @@ public class AnimalNpc
 
     public AnimalNpc(Texture2D texture, Tilemap tilemap, float moveSpeed, Random rng)
     {
+        ArgumentNullException.ThrowIfNull(texture);
+        ArgumentNullException.ThrowIfNull(tilemap);
+        ArgumentNullException.ThrowIfNull(rng);
         _tilemap = tilemap;
         _moveSpeed = moveSpeed;
         _rng = rng;

@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -34,7 +35,7 @@ public class Sprite
 
         spriteBatch.Draw(
             Region.Texture,
-            position,
+            new Vector2(MathF.Round(position.X), MathF.Round(position.Y)),
             Region.SourceRect,
             Color,
             Rotation,

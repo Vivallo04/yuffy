@@ -15,6 +15,10 @@ public class TreeDecoration
 
     public TreeDecoration(Texture2D texture, int frameCount, Vector2 position, Point blockedTile, Random rng)
     {
+        ArgumentNullException.ThrowIfNull(texture);
+        ArgumentNullException.ThrowIfNull(rng);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(frameCount, 0);
+
         BlockedTile = blockedTile;
         _position = position;
 

@@ -41,11 +41,13 @@ public class SkeletonNpc
     private float _attackCooldown;
     private float _deathAnimTimer;
     private float _alertTimer;
+    private bool _hasDealtDamage;
 
     private const float WanderSpeed = 45f;
     private const float ChaseSpeed = 110f;
-    private const float DetectionRadius = 250f;
-    private const float AttackRange = 55f;
+    public const float DetectionRadius = 250f;
+    public const float AttackRange = 55f;
+    public const float HitRange = 65f;
     private const int AttackDamage = 1;
     private const float AttackCooldownSeconds = 0.8f;
 
@@ -53,6 +55,16 @@ public class SkeletonNpc
         Texture2D hurtTex, Texture2D deathTex, Texture2D jumpTex,
         Texture2D alertTex, Tilemap tilemap, Random rng)
     {
+        ArgumentNullException.ThrowIfNull(idleTex);
+        ArgumentNullException.ThrowIfNull(walkTex);
+        ArgumentNullException.ThrowIfNull(attackTex);
+        ArgumentNullException.ThrowIfNull(hurtTex);
+        ArgumentNullException.ThrowIfNull(deathTex);
+        ArgumentNullException.ThrowIfNull(jumpTex);
+        ArgumentNullException.ThrowIfNull(alertTex);
+        ArgumentNullException.ThrowIfNull(tilemap);
+        ArgumentNullException.ThrowIfNull(rng);
+
         _tilemap = tilemap;
         _rng = rng;
         _alertTexture = alertTex;
@@ -141,15 +153,18 @@ public class SkeletonNpc
 
             case State.Attack:
                 _stateTimer -= dt;
-                if (_stateTimer <= 0)
+                float hitPoint = (float)_attackAnimation.Duration * 0.4f;
+                if (!_hasDealtDamage && _stateTimer <= hitPoint)
                 {
-                    if (_attackCooldown <= 0)
+                    _hasDealtDamage = true;
+                    if (distToPlayer < HitRange)
                     {
                         damageDealt = AttackDamage;
                         _attackCooldown = AttackCooldownSeconds;
                     }
-                    EnterChaseState(playerPos);
                 }
+                if (_stateTimer <= 0)
+                    EnterChaseState(playerPos);
                 break;
 
             case State.Dying:
@@ -222,6 +237,7 @@ public class SkeletonNpc
         _state = State.Attack;
         _sprite.Animation = _attackAnimation;
         _stateTimer = (float)_attackAnimation.Duration;
+        _hasDealtDamage = false;
         UpdateFacing(playerPos - _position);
     }
 

@@ -348,3 +348,21 @@
 /processor:FontDescriptionProcessor
 /build:fonts/Minecraft.spritefont
 
+#begin music/coin.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:music/coin.wav
+
+#begin music/hurt.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:music/hurt.wav
+
+#begin music/time_for_adventure.mp3
+/importer:Mp3Importer
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:music/time_for_adventure.mp3
+

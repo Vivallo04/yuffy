@@ -26,6 +26,8 @@ public class SnowParticles
 
     public SnowParticles(Texture2D pixel, VirtualViewport viewport)
     {
+        ArgumentNullException.ThrowIfNull(pixel);
+        ArgumentNullException.ThrowIfNull(viewport);
         _pixel = pixel;
         _viewport = viewport;
         _rng = new Random();

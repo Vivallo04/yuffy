@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Yuffy.Rendering;
@@ -14,6 +15,8 @@ public class CropDecoration
 
     public CropDecoration(Texture2D soilTexture, TextureRegion cropRegion, Vector2 position)
     {
+        ArgumentNullException.ThrowIfNull(soilTexture);
+        ArgumentNullException.ThrowIfNull(cropRegion);
         _position = position;
 
         var soilRegion = new TextureRegion(soilTexture);

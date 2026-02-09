@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Input;
+using Microsoft.Xna.Framework.Media;
 using Yuffy.Gameplay;
 using Yuffy.Rendering;
 using Yuffy.UI;
@@ -106,6 +108,18 @@ public class Game1 : Game
     private NineSliceBox _buttonBox;
     private MouseState _previousMouseState;
 
+    private Song _backgroundMusic;
+    private SoundEffect _coinSound;
+    private SoundEffect _hurtSound;
+
+#if DEBUG
+    private bool _debugMode;
+    private float _debugTimeScale = 1.0f;
+    private int _frameCount;
+    private float _fpsTimer;
+    private float _currentFps;
+#endif
+
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this);
@@ -114,6 +128,8 @@ public class Game1 : Game
 
         _graphics.PreferredBackBufferWidth = 1280;
         _graphics.PreferredBackBufferHeight = 720;
+        IsFixedTimeStep = false;
+        _graphics.SynchronizeWithVerticalRetrace = true;
         Window.AllowUserResizing = true;
         Window.ClientSizeChanged += (_, _) => RefreshViewportFromWindow();
     }
@@ -461,7 +477,7 @@ public class Game1 : Game
         _mushroomTexture = Content.Load<Texture2D>("images/tilesets/UI/playercount");
 
         _collectibles = new List<Collectible>();
-        for (int i = 0; i < 35; i++)
+        for (int i = 0; i < 25; i++)
         {
             for (int attempt = 0; attempt < 100; attempt++)
             {
@@ -495,6 +511,10 @@ public class Game1 : Game
 
         _mainMenuUI = new MainMenuUI(nineSliceBox, _buttonBox, _minecraftFont, _pixelTexture, _viewport);
         _pauseMenuUI = new PauseMenuUI(nineSliceBox, _buttonBox, _minecraftFont, _pixelTexture, _viewport);
+
+        _backgroundMusic = Content.Load<Song>("music/time_for_adventure");
+        _coinSound = Content.Load<SoundEffect>("music/coin");
+        _hurtSound = Content.Load<SoundEffect>("music/hurt");
     }
 
     private Vector2 GetVirtualMousePosition(MouseState mouseState)
@@ -528,7 +548,12 @@ public class Game1 : Game
         {
             var action = _mainMenuUI.Update(virtualMouse, mouseState, _previousMouseState);
             if (action == MenuAction.Play)
+            {
                 _gameState = GameState.Playing;
+                MediaPlayer.IsRepeating = true;
+                MediaPlayer.Volume = 0.5f;
+                MediaPlayer.Play(_backgroundMusic);
+            }
             else if (action == MenuAction.Exit)
                 Exit();
 
@@ -542,14 +567,23 @@ public class Game1 : Game
         if (_gameState == GameState.Paused)
         {
             if (currentKeyState.IsKeyDown(Keys.Escape) && !_previousKeyboardState.IsKeyDown(Keys.Escape))
+            {
                 _gameState = GameState.Playing;
+                MediaPlayer.Resume();
+            }
             else
             {
                 var action = _pauseMenuUI.Update(virtualMouse, mouseState, _previousMouseState);
                 if (action == PauseAction.Resume)
+                {
                     _gameState = GameState.Playing;
+                    MediaPlayer.Resume();
+                }
                 else if (action == PauseAction.ExitToMenu)
+                {
                     _gameState = GameState.MainMenu;
+                    MediaPlayer.Stop();
+                }
             }
 
             _previousKeyboardState = currentKeyState;
@@ -589,8 +623,30 @@ public class Game1 : Game
             else if (_inventoryOpen)
                 _inventoryOpen = false;
             else
+            {
                 _gameState = GameState.Paused;
+                MediaPlayer.Pause();
+            }
         }
+
+#if DEBUG
+        if (currentKeyState.IsKeyDown(Keys.F3) && !_previousKeyboardState.IsKeyDown(Keys.F3))
+            _debugMode = !_debugMode;
+
+        if (_debugMode)
+        {
+            if (currentKeyState.IsKeyDown(Keys.F5) && !_previousKeyboardState.IsKeyDown(Keys.F5))
+                _timeOfDay = 0.80f;
+            if (currentKeyState.IsKeyDown(Keys.F6) && !_previousKeyboardState.IsKeyDown(Keys.F6))
+                _timeOfDay = 0.35f;
+            if (currentKeyState.IsKeyDown(Keys.F7) && !_previousKeyboardState.IsKeyDown(Keys.F7))
+                _debugTimeScale = 0.25f;
+            if (currentKeyState.IsKeyDown(Keys.F8) && !_previousKeyboardState.IsKeyDown(Keys.F8))
+                _debugTimeScale = 1.0f;
+            if (currentKeyState.IsKeyDown(Keys.F9) && !_previousKeyboardState.IsKeyDown(Keys.F9))
+                _debugTimeScale = 5.0f;
+        }
+#endif
 
         // Death fade-out
         if (_deathFadeTimer > 0)
@@ -635,6 +691,17 @@ public class Game1 : Game
         bool isMoving = direction != Vector2.Zero;
         bool isSprinting = currentKeyState.IsKeyDown(Keys.LeftShift) || currentKeyState.IsKeyDown(Keys.RightShift);
 
+        int playerRow = (int)(_playerPosition.Y / _tilemap.ScaledTileSize);
+        int midRow = _tilemap.MapHeight / 2;
+        int transRadius = 5;
+        float snowFactor;
+        if (playerRow >= midRow + transRadius)
+            snowFactor = 0f;
+        else if (playerRow <= midRow - transRadius)
+            snowFactor = 1f;
+        else
+            snowFactor = 1f - (float)(playerRow - (midRow - transRadius)) / (transRadius * 2);
+
         // Decrement reaction timer
         if (_playerReactionTimer > 0)
             _playerReactionTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -642,7 +709,8 @@ public class Game1 : Game
         if (isMoving)
         {
             direction.Normalize();
-            float speed = isSprinting ? RunSpeed : MovementSpeed;
+            float effectiveRunSpeed = MathHelper.Lerp(RunSpeed, MovementSpeed, snowFactor);
+            float speed = isSprinting ? effectiveRunSpeed : MovementSpeed;
             Vector2 previousPosition = _playerPosition;
             _playerPosition += direction * speed * (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -652,7 +720,7 @@ public class Game1 : Game
             _playerPosition.X = MathHelper.Clamp(_playerPosition.X, halfTile, worldW - halfTile);
             _playerPosition.Y = MathHelper.Clamp(_playerPosition.Y, halfTile, worldH - halfTile);
 
-            float r = _tilemap.ScaledTileSize * 0.3f;
+            float r = _tilemap.ScaledTileSize * 0.45f;
             if (IsTileBlockedAt(_playerPosition.X - r, _playerPosition.Y) ||
                 IsTileBlockedAt(_playerPosition.X + r, _playerPosition.Y) ||
                 IsTileBlockedAt(_playerPosition.X, _playerPosition.Y - r) ||
@@ -661,8 +729,9 @@ public class Game1 : Game
 
             if (_playerReactionTimer <= 0)
             {
-                _player.Animation = isSprinting ? _runAnimation : _walkAnimation;
-                _hair.Animation = isSprinting ? _hairRunAnimation : _hairWalkAnimation;
+                bool showRun = isSprinting && snowFactor < 1f;
+                _player.Animation = showRun ? _runAnimation : _walkAnimation;
+                _hair.Animation = showRun ? _hairRunAnimation : _hairWalkAnimation;
             }
 
             if (direction.X < 0)
@@ -694,7 +763,12 @@ public class Game1 : Game
         foreach (var tree in _trees)
             tree.Update(gameTime);
 
-        _timeOfDay = (_timeOfDay + (float)gameTime.ElapsedGameTime.TotalSeconds / DayDurationSeconds) % 1.0f;
+#if DEBUG
+        float dayDelta = (float)gameTime.ElapsedGameTime.TotalSeconds * _debugTimeScale / DayDurationSeconds;
+#else
+        float dayDelta = (float)gameTime.ElapsedGameTime.TotalSeconds / DayDurationSeconds;
+#endif
+        _timeOfDay = (_timeOfDay + dayDelta) % 1.0f;
 
         // Skeleton spawn at dusk
         bool isNight = _timeOfDay >= 0.80f || _timeOfDay < 0.28f;
@@ -761,6 +835,7 @@ public class Game1 : Game
             {
                 _playerHp = Math.Max(0, _playerHp - dmg);
                 _playerDamageCooldown = 1.0f;
+                _hurtSound.Play();
                 if (_playerHp > 0)
                 {
                     _playerReactionTimer = 0.8f;
@@ -778,6 +853,7 @@ public class Game1 : Game
             {
                 _playerHp = Math.Max(0, _playerHp - dmg);
                 _playerDamageCooldown = 1.0f;
+                _hurtSound.Play();
                 if (_playerHp > 0)
                 {
                     _playerReactionTimer = 0.8f;
@@ -798,10 +874,13 @@ public class Game1 : Game
         }
 
         // Update collectibles (magnet + collection)
+        int prevCollected = _collectibles.Count(c => c.Collected);
         foreach (var c in _collectibles)
             c.Update((float)gameTime.ElapsedGameTime.TotalSeconds, _playerPosition);
 
         int collected = _collectibles.Count(c => c.Collected);
+        if (collected > prevCollected)
+            _coinSound.Play();
         _miniGameUI.Collected = collected;
         if (collected >= _miniGameUI.Target && !_miniGameUI.Won)
             _miniGameUI.TriggerWin();
@@ -842,6 +921,21 @@ public class Game1 : Game
 
         _previousKeyboardState = currentKeyState;
         _previousMouseState = mouseState;
+
+#if DEBUG
+        if (_debugMode)
+        {
+            _frameCount++;
+            _fpsTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (_fpsTimer >= 0.5f)
+            {
+                _currentFps = _frameCount / _fpsTimer;
+                _frameCount = 0;
+                _fpsTimer = 0;
+            }
+        }
+#endif
+
         base.Update(gameTime);
     }
 
@@ -941,6 +1035,28 @@ public class Game1 : Game
         foreach (var entry in _drawList)
             entry.draw(_spriteBatch);
 
+#if DEBUG
+        if (_debugMode)
+        {
+            foreach (var skel in _skeletons)
+            {
+                if (skel.IsDead) continue;
+                DrawCircle(skel.Position, SkeletonNpc.DetectionRadius, Color.Yellow * 0.15f);
+                DrawCircle(skel.Position, SkeletonNpc.AttackRange, Color.Orange * 0.4f);
+                DrawCircle(skel.Position, SkeletonNpc.HitRange, Color.Red * 0.4f);
+            }
+            foreach (var gob in _goblins)
+            {
+                if (gob.IsDead) continue;
+                DrawCircle(gob.Position, GoblinNpc.DetectionRadius, Color.Yellow * 0.15f);
+                DrawCircle(gob.Position, GoblinNpc.AttackRange, Color.Orange * 0.4f);
+                DrawCircle(gob.Position, GoblinNpc.HitRange, Color.Red * 0.4f);
+            }
+            float playerR = _tilemap.ScaledTileSize * 0.3f;
+            DrawCircle(_playerPosition, playerR, Color.Lime * 0.5f);
+        }
+#endif
+
         _spriteBatch.End();
 
         // Day/night tint overlay
@@ -1036,6 +1152,58 @@ public class Game1 : Game
         _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
         _miniGameUI.Draw(_spriteBatch);
         _spriteBatch.End();
+
+#if DEBUG
+        if (_debugMode)
+        {
+            _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+
+            const float fontScale = 0.5f;
+            const float lineH = 15f;
+            const int pad = 8;
+            bool isNight = _timeOfDay >= 0.80f || _timeOfDay < 0.28f;
+
+            string[] lines =
+            {
+                $"FPS: {_currentFps:F0}",
+                $"Pos: {_playerPosition.X:F0}, {_playerPosition.Y:F0}",
+                $"State: {_gameState}",
+                $"Time: {_timeOfDay:P0} ({(isNight ? "Night" : "Day")})",
+                $"Speed: {_debugTimeScale:F2}x",
+                $"Skeletons: {_skeletons.Count}  Goblins: {_goblins.Count}",
+                $"HP: {_playerHp}/{MaxPlayerHp}  Mushrooms: {_collectibles.Count}/{_miniGameUI.Target}",
+                "F5:Night F6:Dawn F7:Slow F8:1x F9:Fast",
+            };
+
+            float maxW = 0;
+            foreach (var line in lines)
+            {
+                float w = _minecraftFont.MeasureString(line).X * fontScale;
+                if (w > maxW) maxW = w;
+            }
+            int panelW = (int)maxW + pad * 2;
+            int panelH = (int)(lines.Length * lineH) + pad * 2;
+            int panelX = 4;
+            int panelY = _viewport.Height - panelH - 4;
+
+            // Border + background
+            _spriteBatch.Draw(_pixelTexture, new Rectangle(panelX - 1, panelY - 1, panelW + 2, panelH + 2), new Color(0, 0, 0, 220));
+            _spriteBatch.Draw(_pixelTexture, new Rectangle(panelX, panelY, panelW, panelH), new Color(20, 20, 30, 200));
+
+            float y = panelY + pad;
+            foreach (var line in lines)
+            {
+                var pos = new Vector2(panelX + pad, y);
+                _spriteBatch.DrawString(_minecraftFont, line, pos + Vector2.One, Color.Black,
+                    0f, Vector2.Zero, fontScale, SpriteEffects.None, 0f);
+                _spriteBatch.DrawString(_minecraftFont, line, pos, Color.White,
+                    0f, Vector2.Zero, fontScale, SpriteEffects.None, 0f);
+                y += lineH;
+            }
+
+            _spriteBatch.End();
+        }
+#endif
 
         // Letter overlay
         if (_letterUI.IsOpen)
@@ -1191,4 +1359,27 @@ public class Game1 : Game
 
         base.Dispose(disposing);
     }
+
+#if DEBUG
+    private void DrawCircle(Vector2 center, float radius, Color color, int segments = 32)
+    {
+        for (int i = 0; i < segments; i++)
+        {
+            float angle1 = MathHelper.TwoPi * i / segments;
+            float angle2 = MathHelper.TwoPi * (i + 1) / segments;
+            var p1 = center + new Vector2((float)Math.Cos(angle1), (float)Math.Sin(angle1)) * radius;
+            var p2 = center + new Vector2((float)Math.Cos(angle2), (float)Math.Sin(angle2)) * radius;
+            DrawLine(p1, p2, color);
+        }
+    }
+
+    private void DrawLine(Vector2 start, Vector2 end, Color color)
+    {
+        var diff = end - start;
+        float length = diff.Length();
+        float angle = (float)Math.Atan2(diff.Y, diff.X);
+        _spriteBatch.Draw(_pixelTexture, start, null, color, angle, Vector2.Zero,
+            new Vector2(length, 1f), SpriteEffects.None, 0f);
+    }
+#endif
 }

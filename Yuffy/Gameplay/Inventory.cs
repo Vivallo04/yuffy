@@ -1,3 +1,5 @@
+using System;
+
 namespace Yuffy.Gameplay;
 
 public class Inventory
@@ -16,19 +18,26 @@ public class Inventory
 
     public void SetSlot(int col, int row, ItemType type, int count)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(col);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(col, Columns);
+        ArgumentOutOfRangeException.ThrowIfNegative(row);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(row, Rows);
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+
         Slots[col, row].Item = type;
         Slots[col, row].Count = count;
     }
 
-    public void AddItem(ItemType type, int count = 1)
+    public bool AddItem(ItemType type, int count = 1)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
         // Try stacking into existing slot
         for (int y = 0; y < Rows; y++)
             for (int x = 0; x < Columns; x++)
                 if (Slots[x, y].Item == type)
                 {
                     Slots[x, y].Count += count;
-                    return;
+                    return true;
                 }
 
         // Find first empty slot
@@ -38,7 +47,9 @@ public class Inventory
                 {
                     Slots[x, y].Item = type;
                     Slots[x, y].Count = count;
-                    return;
+                    return true;
                 }
+
+        return false;
     }
 }
