@@ -88,6 +88,11 @@ else
     echo "   WARNING: No icon source found, skipping .icns generation"
 fi
 
+# --- Ad-hoc code sign ---
+echo "==> Code signing (ad-hoc)"
+find "$BUNDLE_DIR/Contents/MacOS" -name "*.dylib" -exec codesign --force -s - {} \;
+codesign --force --deep -s - "$BUNDLE_DIR"
+
 # --- Create archive ---
 echo "==> Creating archive"
 tar -czf "$APP_NAME-macos-universal.tar.gz" "$BUNDLE_DIR"
