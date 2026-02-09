@@ -33,6 +33,7 @@ public class GoblinNpc
     public float Y => _position.Y;
     public bool IsDead => _state == State.Dead;
     public bool IsAttacking => _state == State.Attack;
+    public bool AttackedThisFrame { get; private set; }
     public Vector2 Position => _position;
 
     private Vector2 _direction;
@@ -145,6 +146,7 @@ public class GoblinNpc
     {
         if (_state == State.Dead) return 0;
 
+        AttackedThisFrame = false;
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
         int damageDealt = 0;
 
@@ -188,6 +190,7 @@ public class GoblinNpc
                 if (!_hasDealtDamage && _stateTimer <= hitPoint)
                 {
                     _hasDealtDamage = true;
+                    AttackedThisFrame = true;
                     if (distToPlayer < HitRange)
                     {
                         damageDealt = AttackDamage;

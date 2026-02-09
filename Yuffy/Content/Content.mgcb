@@ -387,6 +387,18 @@
 /processorParam:Quality=Best
 /build:music/explosion.wav
 
+#begin music/power_up.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:music/power_up.wav
+
+#begin music/tap.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:music/tap.wav
+
 #begin images/tilesets/UI/arrow_left.png
 /importer:TextureImporter
 /processor:TextureProcessor

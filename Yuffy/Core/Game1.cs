@@ -78,7 +78,6 @@ public class Game1 : Game
     private const int MaxPlayerHp = 5;
     private float _playerDamageCooldown;
     private float _deathFadeTimer;
-    private bool _deathFromTimer;
 
     private Texture2D _cursorTexture;
 
@@ -117,6 +116,8 @@ public class Game1 : Game
     private SoundEffect _coinSound;
     private SoundEffect _hurtSound;
     private SoundEffect _explosionSound;
+    private SoundEffect _powerUpSound;
+    private SoundEffect _tapSound;
     private string _loadError;
     private bool _settingsPendingSave;
     private float _settingsSaveDelay;
@@ -559,6 +560,8 @@ public class Game1 : Game
         _coinSound = Content.Load<SoundEffect>("music/coin");
         _hurtSound = Content.Load<SoundEffect>("music/hurt");
         _explosionSound = Content.Load<SoundEffect>("music/explosion");
+        _powerUpSound = Content.Load<SoundEffect>("music/power_up");
+        _tapSound = Content.Load<SoundEffect>("music/tap");
     }
 
     private void DrawLoadError()
@@ -805,13 +808,6 @@ public class Game1 : Game
                 _miniGameUI.Won = false;
                 _letterPlaced = false;
                 _letterRead = false;
-
-                if (_deathFromTimer)
-                {
-                    _deathFromTimer = false;
-                    _miniGameUI.IsActive = false;
-                    _miniGameUI.Lost = false;
-                }
             }
             _player.Update(gameTime);
             _hair.Update(gameTime);
@@ -977,6 +973,8 @@ public class Game1 : Game
         foreach (var skel in _skeletons)
         {
             int dmg = skel.Update(gameTime, _playerPosition);
+            if (skel.AttackedThisFrame)
+                _tapSound.Play();
             if (dmg > 0 && _playerDamageCooldown <= 0)
             {
                 _playerHp = Math.Max(0, _playerHp - dmg);
@@ -995,6 +993,8 @@ public class Game1 : Game
         foreach (var gob in _goblins)
         {
             int dmg = gob.Update(gameTime, _playerPosition);
+            if (gob.AttackedThisFrame)
+                _tapSound.Play();
             if (dmg > 0 && _playerDamageCooldown <= 0)
             {
                 _playerHp = Math.Max(0, _playerHp - dmg);
@@ -1029,14 +1029,28 @@ public class Game1 : Game
             _coinSound.Play();
         _miniGameUI.Collected = collected;
         if (collected >= _miniGameUI.Target && !_miniGameUI.AllCollected)
+        {
             _miniGameUI.TriggerAllCollected();
+            _powerUpSound.Play();
+        }
         _miniGameUI.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
 
-        // Timer ran out — kill the player
-        if (_miniGameUI.Lost && _deathFadeTimer <= 0 && _playerHp > 0)
+        // Timer expired — freeze gameplay, then transition to Game Over
+        if (_miniGameUI.Lost)
         {
-            _playerHp = 0;
-            _deathFromTimer = true;
+            if (_miniGameUI.ResultTimerExpired && !_screenFade.IsActive)
+            {
+                _screenFade.Start(1.0f, () =>
+                {
+                    _gameState = GameState.GameOver;
+                    MediaPlayer.Stop();
+                });
+            }
+
+            _previousKeyboardState = currentKeyState;
+            _previousMouseState = mouseState;
+            base.Update(gameTime);
+            return;
         }
 
         // Place letter in toolbar when all mushrooms collected
@@ -1254,25 +1268,12 @@ public class Game1 : Game
             _spriteBatch.Draw(_pixelTexture, new Rectangle(0, 0, _viewport.Width, _viewport.Height),
                 new Color(0, 0, 0, (int)(alpha * 200)));
 
-            if (_deathFromTimer)
-            {
-                float textScale = 3.0f;
-                string msg = "TIME'S UP!";
-                Vector2 size = _minecraftFont.MeasureString(msg) * textScale;
-                Vector2 pos = new(_viewport.Width / 2f - size.X / 2f, _viewport.Height / 2f - size.Y / 2f);
-                _spriteBatch.DrawString(_minecraftFont, msg, pos,
-                    new Color(255, 255, 255, (int)(alpha * 255)),
-                    0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
-            }
-            else
-            {
-                float iconScale = 4f;
-                int iconW = (int)(_deathIconTexture.Width * iconScale);
-                int iconH = (int)(_deathIconTexture.Height * iconScale);
-                _spriteBatch.Draw(_deathIconTexture,
-                    new Rectangle(_viewport.Width / 2 - iconW / 2, _viewport.Height / 2 - iconH / 2, iconW, iconH),
-                    new Color(255, 255, 255, (int)(alpha * 255)));
-            }
+            float iconScale = 4f;
+            int iconW = (int)(_deathIconTexture.Width * iconScale);
+            int iconH = (int)(_deathIconTexture.Height * iconScale);
+            _spriteBatch.Draw(_deathIconTexture,
+                new Rectangle(_viewport.Width / 2 - iconW / 2, _viewport.Height / 2 - iconH / 2, iconW, iconH),
+                new Color(255, 255, 255, (int)(alpha * 255)));
 
             _spriteBatch.End();
         }
@@ -1536,7 +1537,6 @@ public class Game1 : Game
             (int)(_tilemap.MapHeight * 0.75f));
         _playerReactionTimer = 0;
         _deathFadeTimer = 0;
-        _deathFromTimer = false;
         _playerDamageCooldown = 0;
         _player.Animation = _idleAnimation;
         _hair.Animation = _hairIdleAnimation;

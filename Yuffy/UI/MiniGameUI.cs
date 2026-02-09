@@ -23,6 +23,7 @@ public class MiniGameUI
     public bool AllCollected { get; set; }
     public bool Won { get; set; }
     public bool Lost { get; set; }
+    public bool ResultTimerExpired => Lost && _resultTextTimer <= 0;
 
     private float _resultTextTimer;
 
