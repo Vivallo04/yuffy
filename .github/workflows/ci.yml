@@ -26,7 +26,4 @@ jobs:
           fc-cache -fv
 
       - name: Build
-        run: dotnet build Yuffy/Yuffy.csproj -c Release --no-restore
-
-      - name: Restore & build (full)
         run: dotnet build Yuffy/Yuffy.csproj -c Release
