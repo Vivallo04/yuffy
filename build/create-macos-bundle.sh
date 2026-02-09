@@ -28,11 +28,32 @@ lipo -create \
     -output "$BUNDLE_DIR/Contents/MacOS/$APP_NAME"
 chmod +x "$BUNDLE_DIR/Contents/MacOS/$APP_NAME"
 
-# --- Copy native libraries from both architectures ---
-# MonoGame DesktopGL ships native .dylib files that need to be included
-echo "==> Copying native libraries"
-for rid in osx-x64 osx-arm64; do
-    find "$PUBLISH_BASE/$rid/publish/" -name "*.dylib" -exec cp -n {} "$BUNDLE_DIR/Contents/MacOS/" \; 2>/dev/null || true
+# --- Create universal native libraries via lipo ---
+echo "==> Creating universal native libraries"
+X64_PUB="$PUBLISH_BASE/osx-x64/publish"
+ARM_PUB="$PUBLISH_BASE/osx-arm64/publish"
+
+for dylib in "$ARM_PUB"/*.dylib; do
+    [ -f "$dylib" ] || continue
+    name="$(basename "$dylib")"
+    if [ -f "$X64_PUB/$name" ]; then
+        if lipo -create "$X64_PUB/$name" "$ARM_PUB/$name" \
+            -output "$BUNDLE_DIR/Contents/MacOS/$name" 2>/dev/null; then
+            echo "   lipo: $name (universal)"
+        else
+            echo "   copy: $name (same arch, using arm64)"
+            cp "$ARM_PUB/$name" "$BUNDLE_DIR/Contents/MacOS/"
+        fi
+    else
+        cp "$dylib" "$BUNDLE_DIR/Contents/MacOS/"
+    fi
+done
+# Copy any x64-only dylibs not present in arm64
+for dylib in "$X64_PUB"/*.dylib; do
+    [ -f "$dylib" ] || continue
+    name="$(basename "$dylib")"
+    [ -f "$BUNDLE_DIR/Contents/MacOS/$name" ] && continue
+    cp "$dylib" "$BUNDLE_DIR/Contents/MacOS/"
 done
 
 # --- Copy managed assemblies (DLLs) from one publish output ---
