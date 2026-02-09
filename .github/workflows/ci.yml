@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [ ' ** ' ]
+
+env:
+  DOTNET_VERSION: '9.0.x'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install Minecraft font
+        run: |
+          mkdir -p ~/.fonts
+          cp Yuffy/Content/fonts/Minecraft.ttf ~/.fonts/
+          fc-cache -fv
+
+      - name: Build
+        run: dotnet build Yuffy/Yuffy.csproj -c Release --no-restore
+
+      - name: Restore & build (full)
+        run: dotnet build Yuffy/Yuffy.csproj -c Release
